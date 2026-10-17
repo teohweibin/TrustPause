@@ -6,8 +6,8 @@
 - Submission title: `[TeamName]_IBM Z Datathon 2026 Project — TrustPause`
 - Theme: Theme 1, Real-Time AI for Critical Decisions
 - Build shape: Full-stack AI prototype on IBM LinuxONE (FastAPI + XGBoost + PyTorch/NNPA + Granite + 2 HTML views, Docker)
-- Current stage: Ready to build
-- Current work card: `work-cards/00-setup-gate.md` (finish unticked items), then `work-cards/01-repo-data-environment.md`
+- Current stage: Building
+- Current work card: `work-cards/01-repo-data-environment.md` (code written, not yet run on the server); finish open items in `work-cards/00-setup-gate.md` alongside
 
 ## Completed work cards
 
@@ -25,6 +25,7 @@
 ## In progress
 
 - 00 Setup gate: remaining items
+- 01 Repo, data and environment: `src/data.py`, `notebooks/01_explore.ipynb`, `requirements.txt` and folders created; waiting for dataset on server and first run
 
 ## Blockers
 
@@ -56,7 +57,7 @@
 - `torch_nnpa` usage: not tested
 - Granite generation time: not measured
 - Dataset on server: not yet
-- GitHub repo: not created yet
+- GitHub repo: https://github.com/teohweibin/TrustPause (cloned on server at `~/shared/trustpause`)
 
 ## Measured results (fill in as you go)
 
