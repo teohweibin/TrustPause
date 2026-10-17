@@ -20,17 +20,17 @@ A (Data & features)
 ## Instructions for the coding agent
 
 1. `AccountState.update_and_features(txn)` returns features for the **receiver** (`dst`) computed from history **before** this transaction, then updates state:
-   - `in_count_1h`, `in_count_24h`, `in_sum_24h`
+   - `in_count_1h`, `in_count_24h`, `lifetime_in_count`
    - `unique_senders_24h` (fan-in)
    - `out_count_24h`, `unique_receivers_24h` (fan-out)
-   - `pass_through_ratio`: out ÷ in within the last 30 min
+   - `pass_through` ratio: out ÷ in amount over the last 1 h and 24 h (capped at 10)
    - `minutes_since_first_seen`
-   - `amount`, `amount_vs_receiver_median`, `payment_format` (encoded), `hour_of_day`
-   - `hops_to_known_mule` (0/1/2/3+) using a networkx graph of training-period edges and training-period mule labels only
+   - `log_amount`, `amount_vs_dst_mean`, `payment_format`, `receiving_currency`, `cross_currency`, `hour_of_day`, `is_self_transfer`
+   - Proximity to flagged accounts: `dst_flagged`, `src_flagged`, flagged senders/receivers of the receiver in 24 h. Labels flag both accounts 24 h after the transaction (simulated report delay) and only up to the end of the training period. Rolling counterparty sets replace a networkx graph (much faster per transaction)
 2. Use deques / dicts keyed by account for rolling windows so updates are O(1)-ish; target well under 1 ms per transaction.
-3. Also keep the receiver's last 10 transactions (for card 04's sequence model).
+3. Sequences for card 04 are built in card 04 from the time-ordered data (not stored per account here, to save memory).
 4. `build_feature_table(df)` runs the state over a DataFrame in time order and returns a feature DataFrame + labels.
-5. Notebook: build tables for train/val/test, save to parquet, show feature distributions for fraud vs normal.
+5. Notebook: build features for all dense days, save to `data/features_all.pkl` with a `split` column, show fraud vs normal comparisons.
 
 ## What not to do
 
@@ -54,8 +54,8 @@ Feature tables for all three splits exist and features differ visibly between fr
 
 ## Stop condition
 
-If graph features are too slow, drop to `hops_to_known_mule` ≤ 1 (direct neighbour) and note it in `build-status.md`.
+If the full run is too slow or runs out of memory, build features on a sample of whole days and note it in `build-status.md`.
 
 ## Status
 
-Not started
+In progress: code written, not yet run on LinuxONE

@@ -25,6 +25,7 @@
 ## In progress
 
 - 00 Setup gate: remaining items (Discord lab confirmation, `.pem` sharing, roles)
+- 02 Feature pipeline: `src/features.py` and `notebooks/02_features.ipynb` written; not yet run on LinuxONE
 
 ## Blockers
 
@@ -36,6 +37,7 @@
 - Stack: Python, pandas, networkx, XGBoost, PyTorch + torch_nnpa, llama.cpp + Granite, FastAPI, SQLite, plain HTML/CSS/JS, Docker
 - Dataset: IBM AML synthetic (`HI-Small_Trans.csv`), licence to verify
 - Split: time-based by calendar day after dropping sparse days (< 1% of busiest day). HI-Small: drop Sep 11–18 (only ~1,100 rows, ~60% laundering); train Sep 1–6, val Sep 7–8, test Sep 9–10
+- Features: online `AccountState` (24 features, see `FEATURE_NAMES`). Flagged-account proximity via rolling counterparty sets instead of networkx. Labels act as reports: flag both accounts 24 h later, training-period labels only
 - Explanations: XGBoost `pred_contribs` (no `shap` package)
 - LLM: Granite on LinuxONE only; no external AI APIs; no IDs in prompts
 - Storage: SQLite

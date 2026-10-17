@@ -10,7 +10,7 @@ All libraries below were confirmed installed in the L1CC Jupyter image (`pip lis
 
 | Layer | Technology |
 |---|---|
-| Data / features | pandas 3.0, networkx 3.7, scikit-learn 1.9 |
+| Data / features | pandas 3.0, numpy, scikit-learn 1.9 |
 | Model 1 | XGBoost 3.4.1; explanations via `booster.predict(dmatrix, pred_contribs=True)` (no `shap` package) |
 | Model 2 | PyTorch 2.11 + `torch_nnpa` on Telum NNPA; TensorFlow 2.18 as fallback |
 | LLM | IBM Granite via `llama_cpp_python` 0.3.36 (same loading approach as the Loan Approval lab) |
@@ -44,7 +44,7 @@ All libraries below were confirmed installed in the L1CC Jupyter image (`pip lis
 | Module | Responsibility |
 |---|---|
 | `src/data.py` | Load dataset, clean columns, time-ordered split (train / validation / test by date) |
-| `src/features.py` | `AccountState` class: rolling in/out counts and sums (1h, 24h), unique senders (fan-in), unique receivers (fan-out), pass-through ratio (out ÷ in within 30 min), first-seen time; graph proximity to known mules (networkx). Same code used offline (training) and online (scoring), so there is no train/serve skew |
+| `src/features.py` | `AccountState` class: rolling in/out counts and sums (1h, 24h), unique senders (fan-in), unique receivers (fan-out), pass-through ratio (out ÷ in, 1h and 24h), first-seen time; proximity to flagged accounts via rolling counterparty sets (labels act as reports: flag both accounts 24 h later, training period only). See `FEATURE_NAMES`. Same code used offline (training) and online (scoring), so there is no train/serve skew |
 | `src/train_xgb.py` | Train XGBoost, choose thresholds on validation, save `models/xgb.json` |
 | `src/train_seq.py` | Train GRU over the receiver's last N=10 transactions, save `models/seq.pt` |
 | `src/scorer.py` | Load models, score one transaction, ensemble, apply decision bands, return reasons |
