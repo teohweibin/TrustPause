@@ -55,8 +55,23 @@
 - Server memory / CPU (`free -h`, `nproc`): not checked
 - `torch_nnpa` usage: not tested
 - Granite generation time: not measured
-- Dataset on server: not yet
-- GitHub repo: not created yet
+- Dataset on server: `data/HI-Small_Trans.csv`, loading verified on LinuxONE.
+- GitHub repo: TrustPause exists; working on branch `xiaowei`. Work Card 01 changes not yet committed or pushed.
+
+## Work Card 01 Verification
+
+- Dataset: `data/HI-Small_Trans.csv`
+- Rows loaded: 5,078,345
+- Load time: 11.1 seconds
+- DataFrame memory: 0.74 GiB
+- Train rows: 5,077,237; fraud rate: 0.0891%
+- Validation rows: 861; fraud rate: 59.0012%
+- Test rows: 247; fraud rate: 59.5142%
+- Test dates are later than training dates.
+- Exploration notebook executed with no errors.
+- Note: Transaction counts are highly uneven across date-based splits.
+- Git ignore checks passed for `data/`, `*.pem`, and `*.db`.
+- Mandatory-lab confirmation: Pending.
 
 ## Measured results (fill in as you go)
 
