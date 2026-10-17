@@ -7,12 +7,12 @@
 - Theme: Theme 1, Real-Time AI for Critical Decisions
 - Build shape: Full-stack AI prototype on IBM LinuxONE (FastAPI + XGBoost + PyTorch/NNPA + Granite + 2 HTML views, Docker)
 - Current stage: Building
-- Current work card: `work-cards/01-repo-data-environment.md` (split fixed; re-run notebook on LinuxONE to confirm); finish open items in `work-cards/00-setup-gate.md` alongside
+- Current work card: `work-cards/02-feature-pipeline.md`; finish open items in `work-cards/00-setup-gate.md` alongside
 
 ## Completed work cards
 
 - [ ] 00 LinuxONE setup gate (mostly done)
-- [ ] 01 Repo, data and environment
+- [x] 01 Repo, data and environment
 - [ ] 02 Feature pipeline
 - [ ] 03 XGBoost model + reasons
 - [ ] 04 Sequence model on Telum NNPA
@@ -25,7 +25,6 @@
 ## In progress
 
 - 00 Setup gate: remaining items (Discord lab confirmation, `.pem` sharing, roles)
-- 01 Repo, data and environment: dataset loaded and explored on LinuxONE; split fixed in code, notebook re-run pending
 
 ## Blockers
 
@@ -43,6 +42,7 @@
 - Frontend: sender view + analyst view, served by FastAPI
 - Access: SSH tunnels (Jupyter 38888, app 8000); no public ports
 - Deployment: Docker on LinuxONE; judges see it in the video
+- Server Git: `~/shared/trustpause` always stays on `main`; personal branches use personal clones (e.g. `~/shared/trustpause-<name>`) with the dataset symlinked
 
 ## Last verified state
 
@@ -61,18 +61,23 @@
 
 ## Work Card 01 Verification
 
-- Dataset: `data/HI-Small_Trans.csv`
-- Rows loaded: 5,078,345
-- Load time: 11.1 seconds
-- DataFrame memory: 0.74 GiB
-- Train rows: 5,077,237; fraud rate: 0.0891%
-- Validation rows: 861; fraud rate: 59.0012%
-- Test rows: 247; fraud rate: 59.5142%
+- Dataset: `data/HI-Small_Trans.csv` (454 MB)
+- Rows loaded: 5,078,345 in ~11–14 s; DataFrame memory ~0.8 GB
+- Sparse tail dropped: Sep 11–18 (1,108 rows, ~60% laundering)
+- Train: Sep 1–6, 3,248,921 rows, 2,530 laundering (0.0779%)
+- Val: Sep 7–8, 965,524 rows, 1,036 laundering (0.1073%)
+- Test: Sep 9–10, 862,792 rows, 956 laundering (0.1108%)
 - Test dates are later than training dates.
-- Exploration notebook executed with no errors.
-- Note: Transaction counts are highly uneven across date-based splits. Fixed: `time_split` now drops sparse days (Sep 11–18). **Re-run `01_explore.ipynb` on the server to record the new split.**
+- Exploration notebook executed on LinuxONE with no errors.
 - Git ignore checks passed for `data/`, `*.pem`, and `*.db`.
 - Mandatory-lab confirmation: Pending.
+
+### Findings for Work Card 02
+
+- Fan-in is a signal but not linear: laundering share ~0.03% for 1 sender, ~1.2% for 10–50 senders, drops again above 50 senders (likely businesses, a false-positive risk).
+- Payment format matters: ACH 0.75% laundering; Reinvestment and Wire 0%.
+- Amounts are in 15+ currencies (incl. Bitcoin); features must handle currency.
+- Some rows are self-transfers (`src == dst`, e.g. Reinvestment).
 
 ## Measured results (fill in as you go)
 
