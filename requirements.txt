@@ -1,4 +1,3 @@
-# Already in the L1CC Jupyter image (s390x): pandas, networkx, scikit-learn,
-# xgboost, torch, torch_nnpa, llama_cpp_python. Only extra packages go here.
+# Already available in the LinuxONE Jupyter image: pandas, networkx, scikit-learn, xgboost, torch, torch_nnpa, llama_cpp_python
 fastapi
 uvicorn

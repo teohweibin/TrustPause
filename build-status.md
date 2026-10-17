@@ -7,7 +7,7 @@
 - Theme: Theme 1, Real-Time AI for Critical Decisions
 - Build shape: Full-stack AI prototype on IBM LinuxONE (FastAPI + XGBoost + PyTorch/NNPA + Granite + 2 HTML views, Docker)
 - Current stage: Building
-- Current work card: `work-cards/01-repo-data-environment.md` (code written, not yet run on the server); finish open items in `work-cards/00-setup-gate.md` alongside
+- Current work card: `work-cards/01-repo-data-environment.md` (loader and notebook run on LinuxONE; time split needs fixing); finish open items in `work-cards/00-setup-gate.md` alongside
 
 ## Completed work cards
 
@@ -24,8 +24,8 @@
 
 ## In progress
 
-- 00 Setup gate: remaining items
-- 01 Repo, data and environment: `src/data.py`, `notebooks/01_explore.ipynb`, `requirements.txt` and folders created; waiting for dataset on server and first run
+- 00 Setup gate: remaining items (Discord lab confirmation, `.pem` sharing, roles)
+- 01 Repo, data and environment: dataset loaded and explored on LinuxONE; split fix pending
 
 ## Blockers
 
@@ -49,15 +49,30 @@
 - Server: ACTIVE, SSH works (user `linux1`)
 - Docker: installed and working
 - Jupyter: running in container `notebook`, reached via SSH tunnel
-- IBM labs: both run (screenshots to save)
+- IBM labs: both run; screenshots in `screenshots/labs/`
 - Telum NNPA: present (`lscpu` → `nnpa`)
 - Libraries: xgboost 3.4.1, torch 2.11.0+cpu, torch_nnpa 1.5.0, tensorflow 2.18.1, llama_cpp_python 0.3.36, networkx 3.7, pandas 3.0.6, scikit-learn 1.9.0
-- FastAPI / Uvicorn: not checked
-- Server memory / CPU (`free -h`, `nproc`): not checked
+- FastAPI / Uvicorn: installed in the Jupyter container
+- Server CPU: 3 (`nproc`). `free` is not available inside the Jupyter container; run `free -h` in the SSH window
 - `torch_nnpa` usage: not tested
 - Granite generation time: not measured
-- Dataset on server: not yet
-- GitHub repo: https://github.com/teohweibin/TrustPause (cloned on server at `~/shared/trustpause`)
+- Dataset on server: `data/HI-Small_Trans.csv`, loading verified on LinuxONE.
+- GitHub repo: https://github.com/teohweibin/TrustPause (cloned on server at `~/shared/trustpause`); branch `xiaowei` merged into `main`
+
+## Work Card 01 Verification
+
+- Dataset: `data/HI-Small_Trans.csv`
+- Rows loaded: 5,078,345
+- Load time: 11.1 seconds
+- DataFrame memory: 0.74 GiB
+- Train rows: 5,077,237; fraud rate: 0.0891%
+- Validation rows: 861; fraud rate: 59.0012%
+- Test rows: 247; fraud rate: 59.5142%
+- Test dates are later than training dates.
+- Exploration notebook executed with no errors.
+- Note: Transaction counts are highly uneven across date-based splits.
+- Git ignore checks passed for `data/`, `*.pem`, and `*.db`.
+- Mandatory-lab confirmation: Pending.
 
 ## Measured results (fill in as you go)
 
