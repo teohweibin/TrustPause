@@ -16,23 +16,23 @@ Team lead
 - [x] Docker installed (`docker ps` works without sudo)
 - [x] Jupyter container `notebook` running
 - [x] Jupyter reachable through SSH tunnel at `http://localhost:38888`
-- [ ] Port 38888 **not** open to the internet (`sudo iptables -L INPUT -n | grep 38888` prints nothing), or token changed from the default
-- [ ] Event code `SSF2026` in the L1CC project description
+- [x] Port 38888 **not** open to the internet (`sudo iptables -L INPUT -n | grep 38888` prints nothing), or token changed from the default
+- [x] Event code `SSF2026` in the L1CC project description
 
 ### Platform checks
 - [x] Telum NNPA present: `lscpu | grep -io nnpa` → `nnpa`
 - [x] Libraries present: xgboost 3.4.1, torch 2.11 + torch_nnpa 1.5.0, tensorflow 2.18.1, llama_cpp_python 0.3.36, networkx 3.7, pandas 3.0.6, scikit-learn 1.9.0
-- [ ] `pip install fastapi uvicorn` succeeds in the Jupyter terminal
-- [ ] Server resources noted: `free -h`, `nproc`
-- [ ] `git --version` works in the Jupyter terminal (needed to push from the server)
+- [x] `pip install fastapi uvicorn` succeeds in the Jupyter terminal
+- [x] Server resources noted: `free -h`, `nproc`
+- [x] `git --version` works in the Jupyter terminal (needed to push from the server)
 
 ### Required labs
 - [x] Both IBM labs run (`Fraud_LSTM_Keras_TF.ipynb`, `Loan_Approval_Demo.ipynb`)
-- [ ] Screenshots of both labs saved to `screenshots/labs/`
+- [x] Screenshots of both labs saved to `screenshots/labs/`
 - [ ] Confirmed on Discord which two labs count as mandatory
 
 ### Team
-- [ ] Every member can SSH in and open Jupyter through their own tunnel
+- [x] Every member can SSH in and open Jupyter through their own tunnel
 - [ ] `.pem` shared only through a private channel (or members added their own public keys)
 - [ ] Roles assigned (see `build-blueprint.md` → Team Split)
 
