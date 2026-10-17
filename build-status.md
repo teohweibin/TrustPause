@@ -7,7 +7,7 @@
 - Theme: Theme 1, Real-Time AI for Critical Decisions
 - Build shape: Full-stack AI prototype on IBM LinuxONE (FastAPI + XGBoost + PyTorch/NNPA + Granite + 2 HTML views, Docker)
 - Current stage: Building
-- Current work card: `work-cards/01-repo-data-environment.md` (loader and notebook run on LinuxONE; time split needs fixing); finish open items in `work-cards/00-setup-gate.md` alongside
+- Current work card: `work-cards/01-repo-data-environment.md` (split fixed; re-run notebook on LinuxONE to confirm); finish open items in `work-cards/00-setup-gate.md` alongside
 
 ## Completed work cards
 
@@ -25,7 +25,7 @@
 ## In progress
 
 - 00 Setup gate: remaining items (Discord lab confirmation, `.pem` sharing, roles)
-- 01 Repo, data and environment: dataset loaded and explored on LinuxONE; split fix pending
+- 01 Repo, data and environment: dataset loaded and explored on LinuxONE; split fixed in code, notebook re-run pending
 
 ## Blockers
 
@@ -36,7 +36,7 @@
 - Theme: Theme 1 (Real-Time AI for Critical Decisions)
 - Stack: Python, pandas, networkx, XGBoost, PyTorch + torch_nnpa, llama.cpp + Granite, FastAPI, SQLite, plain HTML/CSS/JS, Docker
 - Dataset: IBM AML synthetic (`HI-Small_Trans.csv`), licence to verify
-- Split: time-based train/val/test
+- Split: time-based by calendar day after dropping sparse days (< 1% of busiest day). HI-Small: drop Sep 11–18 (only ~1,100 rows, ~60% laundering); train Sep 1–6, val Sep 7–8, test Sep 9–10
 - Explanations: XGBoost `pred_contribs` (no `shap` package)
 - LLM: Granite on LinuxONE only; no external AI APIs; no IDs in prompts
 - Storage: SQLite
@@ -70,7 +70,7 @@
 - Test rows: 247; fraud rate: 59.5142%
 - Test dates are later than training dates.
 - Exploration notebook executed with no errors.
-- Note: Transaction counts are highly uneven across date-based splits.
+- Note: Transaction counts are highly uneven across date-based splits. Fixed: `time_split` now drops sparse days (Sep 11–18). **Re-run `01_explore.ipynb` on the server to record the new split.**
 - Git ignore checks passed for `data/`, `*.pem`, and `*.db`.
 - Mandatory-lab confirmation: Pending.
 

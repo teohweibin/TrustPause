@@ -38,7 +38,7 @@ Replay or sender request → `features.py` (rolling account state) → `scorer.p
 ## Data / State / Storage Rules
 
 - Dataset: IBM AML `HI-Small_Trans.csv`, stored in `data/` (gitignored). Sample if memory is tight.
-- **Time-based split only** (train on earliest ~60% of days, validate on next ~20%, test on last ~20%).
+- **Time-based split only.** First drop sparse days (< 1% of the busiest day; in HI-Small that is Sep 11–18). Then train on the earliest ~60% of days, validate on the next ~20%, test on the last ~20% (Sep 1–6 / 7–8 / 9–10).
 - Graph "known mule" anchors come from **training-period labels only**.
 - Same `AccountState` code for training and serving.
 - SQLite file `trustpause.db` gitignored.

@@ -69,10 +69,25 @@ def load_transactions(path=DEFAULT_PATH, nrows=None):
     return df.sort_values("ts", kind="stable").reset_index(drop=True)
 
 
-def time_split(df, train_frac=0.6, val_frac=0.2):
-    """Split transactions chronologically by calendar day."""
+def drop_sparse_days(df, min_share=0.01):
+    """Drop calendar days with fewer rows than `min_share` of the busiest day.
+
+    In HI-Small, normal activity stops after 2022-09-10; the remaining days
+    hold only a few hundred rows, about 60% of them laundering. Keeping them
+    would make validation and test unrealistic.
+    """
+    row_days = df["ts"].dt.normalize()
+    counts = row_days.value_counts()
+    dense_days = counts[counts >= min_share * counts.max()].index
+    return df.loc[row_days.isin(dense_days)].copy()
+
+
+def time_split(df, train_frac=0.6, val_frac=0.2, min_day_share=0.01):
+    """Split transactions chronologically by calendar day, after dropping sparse days."""
     if df.empty:
         raise ValueError("Cannot split an empty DataFrame.")
+
+    df = drop_sparse_days(df, min_day_share)
 
     days = (
         df["ts"]
