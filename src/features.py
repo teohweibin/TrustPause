@@ -253,8 +253,46 @@ def build_feature_table(df, label_cutoff=None, progress_every=500_000):
         out[i] = state.update_and_features(*row)
         if progress_every and (i + 1) % progress_every == 0:
             elapsed = time.time() - start
-            print(f"{i + 1:,} rows  {elapsed:.0f}s  ({1e6 * elapsed / (i + 1):.1f} µs/row)")
+            print(f"{i + 1:,} rows  {elapsed:.0f}s  ({1e6 * elapsed / (i + 1):.1f} µs/row)", flush=True)
 
     features = pd.DataFrame(out, columns=FEATURE_NAMES, index=df.index)
     features["label"] = df["label"].to_numpy()
     return features, state
+
+
+def main(argv=None):
+    """Build data/features_all.pkl. Run from the repo root: python -m src.features"""
+    import argparse
+    from pathlib import Path
+
+    from .data import DEFAULT_PATH, drop_sparse_days, load_transactions, time_split
+
+    parser = argparse.ArgumentParser(description=main.__doc__)
+    parser.add_argument("--data", default=DEFAULT_PATH)
+    parser.add_argument("--out", default=Path(DEFAULT_PATH).parent / "features_all.pkl")
+    parser.add_argument("--nrows", type=int, default=None)
+    args = parser.parse_args(argv)
+
+    df = load_transactions(args.data, nrows=args.nrows)
+    dense = drop_sparse_days(df)
+    train, val, _ = time_split(df)
+    train_end, val_end = train["ts"].max(), val["ts"].max()
+    del df, train, val, _
+    print(f"Dense rows: {len(dense):,}; training labels used up to {train_end}", flush=True)
+
+    start = time.time()
+    features, state = build_feature_table(dense, label_cutoff=train_end)
+    elapsed = time.time() - start
+    print(f"Built {len(features):,} rows in {elapsed:.0f}s ({1e6 * elapsed / len(features):.1f} µs per transaction)")
+    print(f"Accounts tracked: {len(state.accounts):,}; flagged accounts: {len(state.flagged):,}")
+
+    ts = dense["ts"].to_numpy()
+    features["split"] = np.where(ts <= train_end, "train", np.where(ts <= val_end, "val", "test"))
+    features["ts"] = ts
+    features.to_pickle(args.out)
+    print(f"Saved {args.out}")
+    print(features.groupby("split", sort=False)["label"].agg(["size", "sum", "mean"]))
+
+
+if __name__ == "__main__":
+    main()
