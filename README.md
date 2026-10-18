@@ -68,6 +68,10 @@ The live server: `uname -m` → **s390x** (IBM Z architecture), `lscpu` lists **
 
 ![s390x, NNPA and the TrustPause container on LinuxONE](screenshots/linuxone_s390x_nnpa_docker.png)
 
+The server in the LinuxONE Community Cloud dashboard (ACTIVE; Ubuntu 24.04-Datathon image; 3 vCPUs, 8 GB RAM):
+
+![L1CC dashboard](screenshots/l1cc_dashboard.png)
+
 ### Telum on-chip AI accelerator (NNPA)
 
 We ran a PyTorch GRU sequence model on the NNPA through `torch_nnpa` (`is_telum2_available()` → `True`; outputs match CPU within 0.00025):
