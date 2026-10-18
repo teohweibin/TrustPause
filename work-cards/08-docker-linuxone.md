@@ -63,4 +63,20 @@ If the build fails after 45 minutes, demo the app running with uvicorn directly 
 
 ## Status
 
-Not started
+Complete — verified on IBM LinuxONE.
+
+Evidence:
+
+- `Dockerfile` builds successfully as image `trustpause:latest`.
+- Image architecture is `s390x`.
+- `.dockerignore` excludes `data/`, `models/`, `*.gguf`, `*.pem`, `*.db`, `.git/`, and notebook caches.
+- Container `trustpause` starts successfully on isolated host port `8001`.
+- API warm-up completed for 4,214,445 historical transactions.
+- `/api/status` returned `stage: ready`.
+- `/sender` returned HTTP 200.
+- `/analyst` returned HTTP 200.
+- Both views opened successfully through an SSH tunnel.
+- Granite model was copied from the existing Jupyter container to `/home/linux1/granite/`.
+- `GRANITE_MODEL_PATH=/granite/granite-4.0-h-350m-base-be.f16.gguf` was set.
+- The Granite model was readable inside the `trustpause` container.
+- Deployment evidence: `screenshots/docker_s390x_evidence.png`.

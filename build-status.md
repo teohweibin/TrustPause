@@ -7,7 +7,7 @@
 - Theme: Theme 1, Real-Time AI for Critical Decisions
 - Build shape: Full-stack AI prototype on IBM LinuxONE (FastAPI + XGBoost + PyTorch/NNPA + Granite + 2 HTML views, Docker)
 - Current stage: Building
-- Current work card: `work-cards/06-scorer-replay-api.md` (code written; verify on LinuxONE), then 07 views on the real API; in parallel 04 NNPA probe, 05, 06 stub, 07 mock, 09; finish open items in `work-cards/00-setup-gate.md` alongside
+- Current work card: `work-cards/07-sender-analyst-views.md` (built; check on LinuxONE), then 08 Docker and 09 video; in parallel 04 NNPA probe, 05, 06 stub, 07 mock, 09; finish open items in `work-cards/00-setup-gate.md` alongside
 
 ## Completed work cards
 
@@ -17,15 +17,15 @@
 - [x] 03 XGBoost model + reasons
 - [x] 04 Sequence model on Telum NNPA
 - [x] 05 Granite explainer
-- [ ] 06 Real-time scorer, replay and API
+- [x] 06 Real-time scorer, replay and API
 - [ ] 07 Sender and analyst views
-- [ ] 08 Docker on LinuxONE
+- [x] 08 Docker on LinuxONE
 - [ ] 09 Evidence, README, video and submission
 
 ## In progress
 
 - 00 Setup gate: remaining items (Discord lab confirmation, `.pem` sharing, roles)
-- 06 Scorer + API: `src/scorer.py`, `src/api.py`, `src/db.py`, `src/stream.py`, `src/templates.py` written; tested on synthetic data (live scores match training exactly); run on LinuxONE pending
+- 07 Views: `web/sender.html`, `web/analyst.html`, `web/style.css` built and browser-tested on synthetic data; check on LinuxONE pending
 
 ## Blockers
 
@@ -43,7 +43,8 @@
 - LLM: Granite on LinuxONE only; no external AI APIs; no IDs in prompts
 - Storage: SQLite (`data/trustpause.db`, reset on API start, WAL, no fsync: demo data)
 - Live scoring: API warms `AccountState` with all history before the test period (same code and label cutoff as training), so live scores equal training scores; cached in `data/state_warm.pkl`
-- Granite jobs: sender first, replayed holds only when queue < 5, replayed pauses never; templates shown instantly
+- Granite: analyst notes for held cases only (validated by `good_note()`); sender warnings always the reviewed templates. Reason: the 350M base model copied the prompt example on LinuxONE
+- Demo recipients: chosen at startup by previewing demo-sender transfers (US-dollar accounts); A/C/E warned, B/D/F allowed (verified on LinuxONE)
 - Frontend: sender view + analyst view, served by FastAPI
 - Access: SSH tunnels (Jupyter 38888, app 8000); no public ports
 - Deployment: Docker on LinuxONE; judges see it in the video
@@ -149,10 +150,27 @@
 - Hold band (top 0.05% on val): test 0.049% of transfers held, **precision 52%, recall 23%** (val 62% / 29%)
 - Pause band (top 0.5% on val): test 0.70% of transfers paused, **precision 8%, recall 52%** (val 13% / 62%)
 - XGBoost single prediction on LinuxONE: p50 0.10 ms, p95 0.30 ms (best iteration 283, trained in 74 s)
-- End-to-end scoring latency p50 / p95 (card 06):
+- End-to-end scoring latency on LinuxONE (features + XGBoost + reasons, replay at 100 tx/s): **p50 0.30 ms, p95 0.72 ms**
+- Live scores equal training scores (`python -m src.scorer --verify 2000` → MATCH on LinuxONE)
 - GRU latency CPU vs NNPA over 1,000 runs: CPU batch 1 p50/p95 `0.171/0.192 ms`; CPU batch 64 `1.693/1.870 ms`; NNPA batch 1 `0.082/0.093 ms`; NNPA batch 64 `0.131/0.140 ms`
 - Granite time per output: English 3.77–4.24 s; Bahasa Malaysia 5.54–6.17 s; analyst note 7.88–11.95 s; maximum 11.95 s.
 
+## Work Card 08 Verification
+
+- Status: Complete — verified on IBM LinuxONE.
+- Docker image `trustpause:latest` built successfully.
+- Image architecture: `s390x`.
+- `.dockerignore` excludes datasets, models, Granite files, keys, databases, Git metadata, and notebook caches.
+- Container `trustpause` ran successfully on isolated host port `8001`.
+- API warm-up processed 4,214,445 historical transactions in 104 seconds.
+- `/api/status` returned `stage: ready`.
+- `/sender` returned HTTP 200.
+- `/analyst` returned HTTP 200.
+- Both views opened successfully through an SSH tunnel.
+- Evidence screenshot: `screenshots/docker_s390x_evidence.png`.
+- Granite model was copied from the Jupyter container to `/home/linux1/granite/`.
+- `GRANITE_MODEL_PATH=/granite/granite-4.0-h-350m-base-be.f16.gguf` was set.
+- The Granite model was readable inside the `trustpause` container.
 ## Next instruction for AI
 
 Read `START_HERE.md`, `build-status.md`, `build-blueprint.md`, `architecture.md`, `design.md` and the current work card. Implement only the current work card. Run its verification steps, update this file, and stop for the team's check.
