@@ -50,7 +50,8 @@ def good_note(note):
 
 WEB = ROOT / "web"
 DEMO_SENDER = "DEMO_SENDER"
-HIGH_LABELS = ["Recipient A — Online seller", "Recipient C — Investment agent", "Recipient E — Job agency"]
+# Strongest risky recipient first: the sender page's scam story always pays "Job agency".
+HIGH_LABELS = ["Recipient E — Job agency", "Recipient C — Investment agent", "Recipient A — Online seller"]
 LOW_LABELS = ["Recipient B — Utility company", "Recipient D — Grocery store", "Recipient F — Family member"]
 
 app_state = {"stage": "starting", "error": None, "granite_last": None}
@@ -61,7 +62,7 @@ GRANITE_REPLAY_BACKLOG = 5
 _job_order = itertools.count()
 
 
-DEMO_AMOUNTS = (100, 1000, 10000)
+DEMO_AMOUNTS = (100, 200, 500, 1000, 2000, 5000, 10000)  # 500 = the story amount
 DEMO_CURRENCY = "US Dollar"
 
 
@@ -95,6 +96,9 @@ def pick_demo_accounts(rows, scorer, clock):
     risky = t[t["label"] == 1].sort_values("score_xgb", ascending=False)
     risky = risky.assign(flagged=risky["dst"].isin(scorer.state.flagged)).sort_values(
         ["flagged", "score_xgb"], ascending=False)
+    # Receivers already reported in training are the strongest candidates (dst_flagged).
+    reported = t[t["dst"].isin(scorer.state.flagged)].sort_values("score_xgb", ascending=False)
+    risky_candidates = list(dict.fromkeys([*reported["dst"], *risky["dst"]]))[:150]
     per_dst = t.groupby("dst").agg(n=("label", "size"), bad=("label", "sum"), top=("score_xgb", "max"))
     clean = per_dst[(per_dst["bad"] == 0) & ~per_dst.index.isin(scorer.state.flagged)]
     # Busy receivers that never scored high first, then the lowest-scoring of the rest.
@@ -102,26 +106,30 @@ def pick_demo_accounts(rows, scorer, clock):
     safe += list(clean[clean["top"] >= pause].sort_values("top").index[:50])
 
     def choose(candidates, passes, rank):
-        """First 3 candidates that pass; if fewer, fill with the best-ranked of the rest."""
+        """Best 3 passing candidates (by rank); if fewer pass, fill with the closest of the rest."""
         chosen, rest = [], []
         for dst in candidates:
             account = profile(dst)
             previews = preview_scores(account)
-            (chosen if passes(previews) else rest).append((rank(previews), account))
-            if len(chosen) == 3:
+            account.update(passed=passes(previews), min_score=round(min(previews), 4), max_score=round(max(previews), 4))
+            (chosen if account["passed"] else rest).append((rank(previews), account))
+            if len(chosen) == 6:  # a few spare, then keep the strongest
                 break
+        chosen = sorted(chosen, key=lambda r: r[0])[:3]
         if len(chosen) < 3:
             print(f"Only {len(chosen)} demo recipients passed; filling with closest candidates", flush=True)
             chosen += sorted(rest, key=lambda r: r[0])[: 3 - len(chosen)]
         return [account for _, account in chosen]
 
-    high = choose(list(dict.fromkeys(risky["dst"]))[:60],
-                  lambda p: min(p) >= pause, lambda p: -min(p))
-    low = choose(safe,
-                 lambda p: max(p) < pause, lambda p: max(p))
+    high = choose(risky_candidates, lambda p: min(p) >= pause, lambda p: -min(p))
+    low = choose(safe, lambda p: max(p) < pause, lambda p: max(p))
 
     accounts = [{**a, "label": label, "expected": "warn"} for label, a in zip(HIGH_LABELS, high)]
     accounts += [{**a, "label": label, "expected": "allow"} for label, a in zip(LOW_LABELS, low)]
+    print(f"Demo recipients (pause threshold {pause:.4f}, amounts {DEMO_AMOUNTS}):", flush=True)
+    for a in sorted(accounts, key=lambda a: a["label"]):
+        print(f"  {a['label']}: expected {a['expected']}, passed {a['passed']}, "
+              f"scores {a['min_score']}–{a['max_score']}", flush=True)
     return sorted(accounts, key=lambda a: a["label"])
 
 
@@ -234,8 +242,10 @@ class DecisionIn(BaseModel):
 
 @app.get("/api/status")
 def status():
+    demo = [{k: a[k] for k in ("label", "expected", "passed", "min_score", "max_score")}
+            for a in app_state.get("demo_accounts", [])]
     return {"stage": app_state["stage"], "error": app_state["error"], "granite": granite_explain is not None,
-            "granite_last": app_state["granite_last"]}
+            "granite_last": app_state["granite_last"], "demo_check": demo}
 
 
 @app.get("/api/demo-accounts")
