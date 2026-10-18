@@ -132,7 +132,9 @@ def amount_band(amount):
 def process(txn, source):
     """Score one transaction, store it, open a case if needed, queue Granite text."""
     scorer, store = app_state["scorer"], app_state["store"]
-    result = scorer.score(txn)
+    # Sender-view transfers are demo actions: score them but don't add them to account
+    # history, so repeating the demo (or a re-sent transfer) gets the same decision.
+    result = scorer.score(txn, record=source != "sender")
     if result["decision"] != "allow":
         result.update(template_texts(result["decision"], result["score"], result["reasons"], result["sender_reasons"]))
     else:

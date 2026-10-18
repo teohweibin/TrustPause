@@ -102,13 +102,17 @@ class Scorer:
                 txn["payment_format"], txn["receiving_currency"], txn["payment_currency"], None, record=False)
             return float(self.booster.inplace_predict(np.asarray(feats, dtype=np.float32).reshape(1, -1))[0])
 
-    def score(self, txn):
-        """txn: dict with ts, src, dst, amount, amount_paid, payment_format, receiving_currency, payment_currency."""
+    def score(self, txn, record=True):
+        """txn: dict with ts, src, dst, amount, amount_paid, payment_format, receiving_currency, payment_currency.
+
+        record=False scores without adding the transfer to account history (used for
+        sender-view demo transfers, so the demo behaves the same every time).
+        """
         with self.lock:
             start = time.perf_counter()
             feats = self.state.update_and_features(
                 to_seconds(txn["ts"]), txn["src"], txn["dst"], txn["amount"], txn["amount_paid"],
-                txn["payment_format"], txn["receiving_currency"], txn["payment_currency"], None)
+                txn["payment_format"], txn["receiving_currency"], txn["payment_currency"], None, record=record)
             x = np.asarray(feats, dtype=np.float32).reshape(1, -1)
             score_xgb = float(self.booster.inplace_predict(x)[0])
             score_seq = float(self.seq_scorer(self.state, txn)) if self.seq_scorer else None
