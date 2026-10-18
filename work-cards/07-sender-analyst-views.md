@@ -50,4 +50,4 @@ If time is short, ship the sender view first and make the analyst view a simple 
 
 ## Status
 
-Not started
+In progress: built and tested in a browser against the API on synthetic data; check on LinuxONE with the real model

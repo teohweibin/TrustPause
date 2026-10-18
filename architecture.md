@@ -97,19 +97,19 @@ Implemented in `src/api.py` (card 06). Full request/response schemas at `/docs`.
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/api/status` | `{stage, error, granite}`; every other endpoint returns 503 until `stage == "ready"` (warm-up) |
-| `GET` | `/api/demo-accounts` | `[{id, label}]`: 3 receivers the model rates risky, 3 it rates safe (labels don't reveal which) |
+| `GET` | `/api/demo-accounts` | `[{id, label, currency}]`: 3 receivers that stay risky and 3 that stay safe for a demo-sender transfer at 100 / 1,000 / 10,000 (checked by preview at startup; US-dollar accounts; labels don't reveal which) |
 | `POST` | `/api/transfer` | Sender view: `{dst, amount}` → `{txn_id, case_id, decision, score, score_xgb, score_seq, latency_ms, sender_reasons, warning_en, warning_bm}`. Sender is the fixed `DEMO_SENDER`; time is the replay clock |
 | `POST` | `/api/transfer/{case_id}/choice` | Sender's answer to a pause: `{choice: "cancel" or "continue"}` |
 | `POST` | `/api/replay/start` | Start replay `{speed}` (transactions per second, 1–5000) |
 | `POST` | `/api/replay/stop` | Stop replay |
 | `GET` | `/api/feed?since=<id>&limit=50` | Latest scored transactions, newest first (no account IDs); analyst view polls every 1 s |
-| `GET` | `/api/queue` | Held cases waiting for review: `{case_id, status, text_source, ts, amount, currency, score, first_reason}` |
-| `GET` | `/api/case/{id}` | Case detail: transaction, scores, `reasons` (analyst), `sender_reasons`, `warning_en/bm`, `analyst_note`, `text_source` (`template` or `granite`) |
+| `GET` | `/api/queue` | Held cases waiting for review: `{case_id, status, note_source, ts, amount, currency, score, first_reason}` |
+| `GET` | `/api/case/{id}` | Case detail: transaction, scores, `reasons` (analyst), `sender_reasons`, `warning_en/bm` (always template), `analyst_note`, `note_source` (`template` or `granite`) |
 | `POST` | `/api/case/{id}/decision` | Analyst `{decision: "approve" or "reject"}`; 409 if not held |
 | `GET` | `/api/metrics` | Decision counts, laundering seen/flagged in replay, latency p50/p95, txn/sec, replay position, clock, thresholds, `sequence_model`, `granite`, `granite_queue` |
 | `GET` | `/`, `/sender`, `/analyst`, `/web/<file>` | Pages from `web/` (card 07) |
 
-**Granite contract (card 05):** `src/explain.py` must define `explain(payload) -> {"warning_en", "warning_bm", "analyst_note"}`. `payload = {decision, score, amount_band (small/medium/large), currency, reasons, analyst_reasons}`. `reasons` is the **sender-safe** list (explain.py builds all three texts from it, and the warnings go to the sender); `analyst_reasons` is the full list. All are `src/reasons.py` dicts with no account IDs. The API shows template text from `src/templates.py` immediately and swaps in Granite text only when `explain` returns `used_granite: True`. Start the API with `GRANITE_MODEL_PATH` set, or every call falls back. `/api/status` → `granite_last` shows the latest result. Jobs are prioritised: sender transfers first, replayed holds only while the queue is short, replayed pauses never.
+**Granite (card 05), decided for the demo:** the sender's warnings always come from the reviewed templates in `src/templates.py` (specific, predictable, checked by a Malay speaker). Granite only drafts the **analyst note for held cases**: `explain(payload)` gets `{decision, score, amount_band, currency, reasons}` (no account IDs), and its `analyst_note` replaces the template note only if `used_granite` is true and the note passes `good_note()` (three labelled bullets, not explain.py's fallback, not the prompt's example). Sender holds go first; replayed holds only while the queue is under 5. Start the API with `GRANITE_MODEL_PATH`; `/api/status` → `granite_last` shows the latest result. Pitch line: the AI never writes the customer-facing warning unreviewed; Granite drafts notes for a human analyst.
 
 ## User Flow
 

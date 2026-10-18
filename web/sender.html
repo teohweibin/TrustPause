@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TrustPause Demo Bank</title>
+<link rel="stylesheet" href="/web/style.css">
+<style>
+  body { display: flex; justify-content: center; padding: 24px 16px 48px; }
+  .phone { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 16px; }
+  .bank-header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .mock { font-size: 12px; font-weight: 700; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px; }
+  form { display: flex; flex-direction: column; gap: 16px; }
+  .amount-row { display: flex; gap: 8px; align-items: center; }
+  .amount-row span { flex: 0 0 auto; font-weight: 600; color: var(--muted); }
+  #send { width: 100%; }
+  .result { border-left: 6px solid var(--allow); }
+  .result.cancelled, .result.hold { border-left-color: var(--info); }
+  .result.continued { border-left-color: var(--pause); }
+  .result h2 { margin-bottom: 6px; }
+  .footer { text-align: center; }
+
+  .overlay { position: fixed; inset: 0; background: rgba(26, 34, 48, .55); display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .overlay[hidden] { display: none; }
+  .modal { width: 100%; max-width: 420px; background: var(--surface); border-radius: var(--radius); overflow: hidden; box-shadow: 0 10px 30px rgba(0, 0, 0, .25); }
+  .modal-head { background: var(--pause); color: #fff; padding: 16px 24px; }
+  .modal-head h2 { font-size: 22px; }
+  .modal-body { padding: 20px 24px 24px; display: flex; flex-direction: column; gap: 14px; }
+  .lang { display: flex; gap: 4px; align-self: flex-end; }
+  .lang button { min-height: 32px; padding: 0 10px; font-size: 13px; background: var(--surface); border-color: var(--border); color: var(--muted); }
+  .lang button[aria-pressed="true"] { background: var(--text); color: #fff; border-color: var(--text); }
+  .reasons { margin: 0; padding-left: 20px; color: var(--muted); font-size: 15px; }
+  .reasons li { margin-bottom: 4px; }
+  .modal-actions { display: flex; flex-direction: column; gap: 4px; }
+  #cancel-transfer { width: 100%; }
+</style>
+</head>
+<body>
+<main class="phone">
+  <div class="bank-header">
+    <h1>TrustPause Demo Bank</h1>
+    <span class="mock">MOCK · DEMO ONLY</span>
+  </div>
+  <p class="muted small" style="margin:0">A pretend banking app. Every transfer is scored live on IBM LinuxONE before the money leaves.</p>
+
+  <div id="status" class="banner" role="status">Connecting to the scoring service…</div>
+
+  <form id="transfer" class="card" novalidate>
+    <h2>Send money</h2>
+    <div>
+      <label for="recipient">Recipient</label>
+      <select id="recipient" required disabled><option>Loading…</option></select>
+    </div>
+    <div>
+      <label for="amount">Amount</label>
+      <div class="amount-row">
+        <span id="currency">USD</span>
+        <input id="amount" type="number" inputmode="decimal" min="1" step="0.01" value="500" required>
+      </div>
+    </div>
+    <button id="send" class="btn-primary" type="submit" disabled>Send</button>
+  </form>
+
+  <section id="result" class="card result" hidden aria-live="polite"></section>
+
+  <p id="latency" class="footer muted small num"></p>
+</main>
+
+<div id="overlay" class="overlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="warning-text">
+    <div class="modal-head"><h2 id="modal-title">! Wait — check this recipient</h2></div>
+    <div class="modal-body">
+      <div class="lang" role="group" aria-label="Language">
+        <button type="button" data-lang="en" aria-pressed="true">EN</button>
+        <button type="button" data-lang="bm" aria-pressed="false">BM</button>
+      </div>
+      <p id="warning-text" style="margin:0"></p>
+      <div id="reasons-block">
+        <h3 class="small muted" style="margin-bottom:6px">Why we paused this</h3>
+        <ul id="reasons" class="reasons"></ul>
+      </div>
+      <div class="modal-actions">
+        <button id="cancel-transfer" class="btn-primary" type="button">Cancel transfer</button>
+        <button id="continue-transfer" class="btn-text" type="button">I understand the risk, continue</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const CURRENCY = { "US Dollar": "USD" };
+let lang = "en";
+let current = null;      // last /api/transfer response
+let lastFocus = null;
+
+async function api(path, options = {}) {
+  const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...options });
+  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+  return res.json();
+}
+
+function showStatus(text, isError = false) {
+  const el = $("status");
+  el.hidden = !text;
+  el.textContent = text || "";
+  el.classList.toggle("error", isError);
+}
+
+async function waitUntilReady() {
+  for (;;) {
+    try {
+      const s = await api("/api/status");
+      if (s.stage === "ready") return;
+      if (s.stage === "failed") { showStatus(`Scoring service failed to start: ${s.error}`, true); return; }
+      showStatus(`Scoring service is starting: ${s.stage}…`);
+    } catch (e) {
+      showStatus("Cannot reach the scoring service. Is the API running and the SSH tunnel open?", true);
+    }
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+}
+
+async function loadRecipients() {
+  const accounts = await api("/api/demo-accounts");
+  const select = $("recipient");
+  select.replaceChildren();
+  for (const a of accounts) {
+    const opt = document.createElement("option");
+    opt.value = a.id;
+    opt.textContent = a.label;
+    opt.dataset.currency = CURRENCY[a.currency] || a.currency;
+    select.append(opt);
+  }
+  select.disabled = false;
+  $("send").disabled = false;
+  updateCurrency();
+  showStatus("");
+}
+
+function updateCurrency() {
+  const opt = $("recipient").selectedOptions[0];
+  $("currency").textContent = opt ? `${opt.dataset.currency} (demo)` : "";
+}
+
+function money(amount) {
+  return `${$("currency").textContent.replace(" (demo)", "")} ${Number(amount).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+}
+
+function showResult(kind, title, body) {
+  const el = $("result");
+  el.className = `card result ${kind}`;
+  el.replaceChildren();
+  const h = document.createElement("h2");
+  h.textContent = title;
+  const p = document.createElement("p");
+  p.style.margin = "0";
+  p.textContent = body;
+  el.append(h, p);
+  el.hidden = false;
+}
+
+function renderWarning() {
+  if (!current) return;
+  $("warning-text").textContent = lang === "en" ? current.warning_en : current.warning_bm;
+  $("reasons-block").hidden = lang !== "en";  // the Malay warning already includes the reasons
+  for (const b of document.querySelectorAll(".lang button")) b.setAttribute("aria-pressed", String(b.dataset.lang === lang));
+  const list = $("reasons");
+  list.replaceChildren();
+  for (const r of current.sender_reasons) {
+    const li = document.createElement("li");
+    li.textContent = r.sentence.charAt(0).toUpperCase() + r.sentence.slice(1);
+    list.append(li);
+  }
+}
+
+function openModal() {
+  lastFocus = document.activeElement;
+  lang = "en";
+  renderWarning();
+  $("overlay").hidden = false;
+  $("cancel-transfer").focus();
+}
+
+function closeModal() {
+  $("overlay").hidden = true;
+  if (lastFocus) lastFocus.focus();
+}
+
+async function choose(choice) {
+  closeModal();
+  const amount = current.amount_display;
+  try {
+    await api(`/api/transfer/${current.case_id}/choice`, { method: "POST", body: JSON.stringify({ choice }) });
+  } catch (e) { /* the choice is only logged; the message below still applies */ }
+  if (choice === "cancel") {
+    showResult("cancelled", "Transfer cancelled", `No money was sent. ${amount} stays in your account.`);
+  } else {
+    showResult("continued", "Transfer sent after warning", `${amount} was sent. Your choice to continue has been recorded.`);
+  }
+}
+
+$("recipient").addEventListener("change", updateCurrency);
+
+$("transfer").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const amount = parseFloat($("amount").value);
+  if (!(amount > 0)) { $("amount").focus(); showStatus("Enter an amount greater than zero.", true); return; }
+  showStatus("");
+  $("send").disabled = true;
+  $("result").hidden = true;
+  try {
+    current = await api("/api/transfer", { method: "POST", body: JSON.stringify({ dst: $("recipient").value, amount }) });
+    current.amount_display = money(amount);
+    $("latency").textContent = `Scored on IBM LinuxONE in ${current.latency_ms.toFixed(1)} ms`;
+    if (current.decision === "allow") {
+      showResult("allow", "✓ Transfer sent", `${current.amount_display} is on its way to ${$("recipient").selectedOptions[0].textContent.split(" — ")[0]}.`);
+    } else if (current.decision === "pause") {
+      openModal();
+    } else {
+      showResult("hold", "⏸ Transfer on hold for your protection", current.warning_en);
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "btn-text";
+      toggle.textContent = "Baca dalam Bahasa Malaysia";
+      let inBm = false;
+      toggle.addEventListener("click", () => {
+        inBm = !inBm;
+        $("result").querySelector("p").textContent = inBm ? current.warning_bm : current.warning_en;
+        toggle.textContent = inBm ? "Read in English" : "Baca dalam Bahasa Malaysia";
+      });
+      $("result").append(toggle);
+    }
+  } catch (e) {
+    showStatus(`Transfer could not be scored: ${e.message}`, true);
+  } finally {
+    $("send").disabled = false;
+  }
+});
+
+for (const b of document.querySelectorAll(".lang button")) {
+  b.addEventListener("click", () => { lang = b.dataset.lang; renderWarning(); });
+}
+$("cancel-transfer").addEventListener("click", () => choose("cancel"));
+$("continue-transfer").addEventListener("click", () => choose("continue"));
+
+document.addEventListener("keydown", (event) => {
+  if ($("overlay").hidden) return;
+  if (event.key === "Escape") { event.preventDefault(); choose("cancel"); }
+  if (event.key === "Tab") {  // keep focus inside the dialog
+    const focusable = [...$("overlay").querySelectorAll("button")];
+    const i = focusable.indexOf(document.activeElement);
+    const next = event.shiftKey ? (i <= 0 ? focusable.length - 1 : i - 1) : (i + 1) % focusable.length;
+    event.preventDefault();
+    focusable[next].focus();
+  }
+});
+
+(async () => { await waitUntilReady(); try { await loadRecipients(); } catch (e) { showStatus(`Could not load recipients: ${e.message}`, true); } })();
+</script>
+</body>
+</html>

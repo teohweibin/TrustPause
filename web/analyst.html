@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TrustPause Analyst Console</title>
+<link rel="stylesheet" href="/web/style.css">
+<style>
+  body { padding: 16px 24px 32px; }
+  header.top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; margin-bottom: 16px; }
+  header.top .title { display: flex; flex-direction: column; }
+  .platform { font-size: 13px; font-weight: 700; color: var(--accent); }
+  .controls { display: flex; gap: 8px; align-items: center; margin-left: auto; }
+  .controls select { width: auto; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .stat { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px 16px; }
+  .stat .label { font-size: 13px; color: var(--muted); }
+  .stat .value { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.2; }
+  .stat .sub { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .panels { display: grid; grid-template-columns: 40fr 25fr 35fr; gap: 16px; align-items: start; }
+  .panel { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; min-height: 420px; }
+  .panel > h2 { margin-bottom: 12px; display: flex; justify-content: space-between; align-items: baseline; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; font-variant-numeric: tabular-nums; }
+  th { text-align: left; font-size: 13px; color: var(--muted); font-weight: 600; padding: 4px 6px; border-bottom: 1px solid #E3E8EE; }
+  td { padding: 6px; border-bottom: 1px solid #EEF1F4; white-space: nowrap; }
+  tr.clickable { cursor: pointer; }
+  tr.clickable:hover, tr.clickable:focus-visible { background: #F0F6F7; }
+  tr.selected { background: #E3F1F2; }
+  .truth { color: var(--hold); font-weight: 700; }
+  .queue { display: flex; flex-direction: column; gap: 10px; max-height: 640px; overflow: auto; }
+  .qcard { flex-shrink: 0; display: block; border: 1px solid #E3E8EE; border-radius: 10px; padding: 10px 12px; text-align: left; background: var(--surface); width: 100%; font-weight: 400; min-height: 0; }
+  .qcard:hover { border-color: var(--accent); }
+  .qcard.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .qcard .row { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+  .qcard .reason { font-size: 14px; color: var(--muted); margin-top: 4px; white-space: normal; }
+  .case h3 { margin: 16px 0 6px; font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .case dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-variant-numeric: tabular-nums; }
+  .case dt { color: var(--muted); }
+  .case dd { margin: 0; }
+  .case ul { margin: 0; padding-left: 20px; }
+  .case li { margin-bottom: 4px; }
+  .tag { font-size: 12px; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 0 6px; margin-left: 4px; }
+  .note { white-space: pre-line; background: var(--bg); border-radius: 8px; padding: 10px 12px; margin: 0; }
+  .sender-saw { background: rgba(178, 94, 0, .06); border-radius: 8px; padding: 10px 12px; margin: 0; }
+  .actions { display: flex; gap: 8px; margin-top: 16px; }
+  .footnote { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  @media (max-width: 1279px) {
+    .panels { grid-template-columns: 1fr; }
+    .panel.feed { order: 3; } .panel.queue-panel { order: 1; } .panel.case { order: 2; }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="title">
+    <h1>TrustPause · Analyst console</h1>
+    <span class="platform">Running live on IBM LinuxONE</span>
+  </div>
+  <div class="controls">
+    <label for="speed" class="sr-only">Replay speed</label>
+    <select id="speed">
+      <option value="100">100 tx/s</option>
+      <option value="500" selected>500 tx/s</option>
+      <option value="2000">2,000 tx/s</option>
+    </select>
+    <button id="replay" class="btn-primary" type="button" disabled>▶ Start replay</button>
+  </div>
+</header>
+
+<div id="status" class="banner" role="status" style="margin-bottom:16px">Connecting to the scoring service…</div>
+
+<section class="stats" aria-label="Live statistics">
+  <div class="stat"><div class="label">Transfers scored</div><div class="value" id="s-total">0</div><div class="sub" id="s-rate">0 tx/s</div></div>
+  <div class="stat"><div class="label">Scoring latency</div><div class="value" id="s-p50">–</div><div class="sub" id="s-p95">p50 · p95 –</div></div>
+  <div class="stat"><div class="label">✓ Allowed</div><div class="value" id="s-allow" style="color:var(--allow)">0</div></div>
+  <div class="stat"><div class="label">! Paused &amp; warned</div><div class="value" id="s-pause" style="color:var(--pause)">0</div></div>
+  <div class="stat"><div class="label">⏸ Held for review</div><div class="value" id="s-hold" style="color:var(--hold)">0</div></div>
+  <div class="stat"><div class="label">Laundering caught*</div><div class="value" id="s-caught">–</div><div class="sub" id="s-caught-sub">of 0 in replay</div></div>
+  <div class="stat"><div class="label">Data clock</div><div class="value small num" id="s-clock" style="font-size:18px">–</div><div class="sub" id="s-granite">Granite: –</div></div>
+</section>
+
+<div class="panels">
+  <section class="panel feed" aria-labelledby="feed-title">
+    <h2 id="feed-title">Live transfers <span class="small muted" id="feed-count"></span></h2>
+    <table>
+      <thead><tr><th>Time</th><th>Amount</th><th>Score</th><th>Decision</th><th title="Ground truth from the synthetic dataset">Fraud*</th></tr></thead>
+      <tbody id="feed"></tbody>
+    </table>
+    <div id="feed-empty" class="empty">Press Start replay to begin.</div>
+    <p class="footnote">* Ground truth from IBM's synthetic AML dataset, shown for evaluation only. The model never sees it.</p>
+  </section>
+
+  <section class="panel queue-panel" aria-labelledby="queue-title">
+    <h2 id="queue-title">Held for review <span class="small muted" id="queue-count"></span></h2>
+    <div id="queue" class="queue"></div>
+    <div id="queue-empty" class="empty">No transfers waiting for review.</div>
+  </section>
+
+  <section class="panel case" aria-labelledby="case-title" aria-live="polite">
+    <h2 id="case-title">Case detail</h2>
+    <div id="case"><div class="empty">Select a held transfer to review it.</div></div>
+  </section>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const CURRENCY = { "US Dollar": "USD", "Euro": "EUR", "UK Pound": "GBP", "Swiss Franc": "CHF", "Yuan": "CNY", "Yen": "JPY",
+  "Rupee": "INR", "Ruble": "RUB", "Shekel": "ILS", "Canadian Dollar": "CAD", "Australian Dollar": "AUD",
+  "Mexican Peso": "MXN", "Saudi Riyal": "SAR", "Brazil Real": "BRL", "Bitcoin": "BTC" };
+const CHIP = { allow: ["chip-allow", "✓ Allow"], pause: ["chip-pause", "! Pause"], hold: ["chip-hold", "⏸ Hold"],
+  held: ["chip-hold", "⏸ Held"], paused: ["chip-pause", "! Paused"], approved: ["chip-allow", "✓ Released"], rejected: ["chip-info", "✕ Blocked"] };
+const fmt = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
+
+let feedRows = [];
+let lastId = 0;
+let selectedCase = null;
+let running = false;
+let feedKey = "";
+let queueKey = "";
+let caseKey = "";
+
+function el(tag, props = {}, children = []) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "text") node.textContent = v;
+    else if (k === "class") node.className = v;
+    else node.setAttribute(k, v);
+  }
+  for (const c of [].concat(children)) if (c) node.append(c);
+  return node;
+}
+const chip = (key) => { const [cls, text] = CHIP[key] || ["chip-neutral", key]; return el("span", { class: `chip ${cls}`, text }); };
+const money = (amount, currency) => `${fmt.format(amount)} ${CURRENCY[currency] || currency || ""}`.trim();
+const time = (ts) => (ts || "").slice(11, 16);
+function scoreEl(score) {
+  const bar = el("span", { class: "score-bar" }, el("span", { style: `width:${Math.round(score * 100)}%` }));
+  return el("span", { class: "score" }, [el("span", { text: score.toFixed(3) }), bar]);
+}
+
+async function api(path, options = {}) {
+  const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...options });
+  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+  return res.json();
+}
+
+function showStatus(text, isError = false) {
+  const s = $("status");
+  s.hidden = !text;
+  s.textContent = text || "";
+  s.classList.toggle("error", isError);
+}
+
+async function waitUntilReady() {
+  for (;;) {
+    try {
+      const s = await api("/api/status");
+      if (s.stage === "ready") { showStatus(""); return true; }
+      if (s.stage === "failed") { showStatus(`Scoring service failed to start: ${s.error}`, true); return false; }
+      showStatus(`Scoring service is starting: ${s.stage}…`);
+    } catch (e) {
+      showStatus("Cannot reach the scoring service. Is the API running and the SSH tunnel open?", true);
+    }
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+}
+
+async function refreshMetrics() {
+  const m = await api("/api/metrics");
+  running = m.replay_running;
+  const total = m.allow + m.pause + m.hold;
+  $("s-total").textContent = fmt.format(total);
+  $("s-rate").textContent = `${fmt.format(m.txn_per_sec)} tx/s · ${fmt.format(m.replay_position)} of ${fmt.format(m.replay_total)}`;
+  $("s-p50").textContent = m.latency_ms_p50 == null ? "–" : `${m.latency_ms_p50.toFixed(2)} ms`;
+  $("s-p95").textContent = m.latency_ms_p95 == null ? "p50 · p95 –" : `p50 · p95 ${m.latency_ms_p95.toFixed(2)} ms`;
+  $("s-allow").textContent = fmt.format(m.allow);
+  $("s-pause").textContent = fmt.format(m.pause);
+  $("s-hold").textContent = fmt.format(m.hold);
+  $("s-caught").textContent = m["laundering_flagged_%"] == null ? "–" : `${m["laundering_flagged_%"]}%`;
+  $("s-caught-sub").textContent = `${fmt.format(m.laundering_flagged)} of ${fmt.format(m.laundering_seen)} in replay`;
+  $("s-clock").textContent = (m.clock || "–").slice(0, 16);
+  const g = m.granite_last;
+  $("s-granite").textContent = !m.granite ? "Granite: not installed"
+    : g ? `Granite notes: ${g.note_accepted ? "working" : "using template"} · queue ${m.granite_queue}`
+    : `Granite: waiting · queue ${m.granite_queue}`;
+  const btn = $("replay");
+  btn.disabled = false;
+  btn.textContent = running ? "■ Stop replay" : (m.replay_position ? "▶ Resume replay" : "▶ Start replay");
+  btn.className = running ? "btn-secondary" : "btn-primary";
+}
+
+async function refreshFeed() {
+  const rows = await api(`/api/feed?since=${lastId}&limit=50`);
+  if (rows.length) {
+    lastId = Math.max(lastId, ...rows.map((r) => r.id));
+    feedRows = rows.concat(feedRows).slice(0, 50);
+  }
+  const key = `${lastId}|${selectedCase}`;
+  if (key === feedKey) return;  // nothing new: keep the DOM (and focus) as it is
+  feedKey = key;
+  const body = $("feed");
+  body.replaceChildren(...feedRows.map((r) => {
+    const tr = el("tr", r.case_id ? { class: "clickable", tabindex: "0", title: "Open case" } : {}, [
+      el("td", { text: time(r.ts) }),
+      el("td", { text: money(r.amount, r.currency) }),
+      el("td", {}, scoreEl(r.score)),
+      el("td", {}, chip(r.decision)),
+      el("td", { class: "truth", text: r.label === 1 ? "● yes" : "" }),
+    ]);
+    if (r.case_id) {
+      if (r.case_id === selectedCase) tr.classList.add("selected");
+      tr.addEventListener("click", () => openCase(r.case_id));
+      tr.addEventListener("keydown", (e) => { if (e.key === "Enter") openCase(r.case_id); });
+    }
+    return tr;
+  }));
+  $("feed-empty").hidden = feedRows.length > 0;
+  $("feed-count").textContent = feedRows.length ? "newest first" : "";
+}
+
+async function refreshQueue() {
+  const items = await api("/api/queue");
+  const key = JSON.stringify(items) + selectedCase;
+  if (key === queueKey) return;
+  queueKey = key;
+  $("queue").replaceChildren(...items.map((q) => {
+    const card = el("button", { class: `qcard${q.case_id === selectedCase ? " selected" : ""}`, type: "button" }, [
+      el("div", { class: "row" }, [el("strong", { text: `Case #${q.case_id}` }), scoreEl(q.score)]),
+      el("div", { class: "row small muted" }, [el("span", { text: `${time(q.ts)} · ${money(q.amount, q.currency)}` }),
+        q.note_source === "granite" ? el("span", { class: "tag", text: "Granite note" }) : null]),
+      q.first_reason ? el("div", { class: "reason", text: q.first_reason }) : null,
+    ]);
+    card.addEventListener("click", () => openCase(q.case_id));
+    return card;
+  }));
+  $("queue-empty").hidden = items.length > 0;
+  $("queue-count").textContent = items.length ? `${items.length} waiting` : "";
+}
+
+async function openCase(id) {
+  selectedCase = id;
+  feedKey = "";  // redraw selection highlight
+  await renderCase();
+  refreshQueue().catch(() => {});
+}
+
+async function renderCase() {
+  if (!selectedCase) return;
+  const c = await api(`/api/case/${selectedCase}`);
+  const key = JSON.stringify(c);
+  if (key === caseKey) return;
+  caseKey = key;
+  $("case-title").textContent = `Case #${c.id}`;
+  const reasons = el("ul", {}, c.reasons.map((r) =>
+    el("li", {}, [r.sentence.charAt(0).toUpperCase() + r.sentence.slice(1), el("span", { class: "tag", text: r.about })])));
+  const parts = [
+    el("div", { class: "row", style: "display:flex;gap:8px;align-items:center" }, [chip(c.decision), chip(c.status),
+      el("span", { class: "small muted", text: c.source === "sender" ? "from sender view" : "from replay" })]),
+    el("h3", { text: "Scores" }),
+    el("dl", {}, [
+      el("dt", { text: "Risk score" }), el("dd", {}, scoreEl(c.score)),
+      el("dt", { text: "XGBoost" }), el("dd", { text: c.score_xgb.toFixed(3) }),
+      el("dt", { text: "Sequence model" }), el("dd", { text: c.score_seq == null ? "not enabled" : c.score_seq.toFixed(3) }),
+      el("dt", { text: "Latency" }), el("dd", { text: `${c.latency_ms.toFixed(2)} ms on LinuxONE` }),
+      el("dt", { text: "Amount" }), el("dd", { text: money(c.amount, c.currency) }),
+      el("dt", { text: "Time" }), el("dd", { text: (c.ts || "").slice(0, 16) }),
+      el("dt", { text: "Receiving account" }), el("dd", { text: c.dst }),
+    ]),
+    el("h3", { text: "Why the model flagged it" }), reasons,
+    el("h3", {}, ["Analyst note ", el("span", { class: "tag", text: c.note_source === "granite" ? "drafted by IBM Granite" : "template" })]),
+    el("p", { class: "note", text: c.analyst_note || "" }),
+    el("h3", { text: "What the sender saw" }),
+    el("p", { class: "sender-saw", text: c.warning_en || "" }),
+  ];
+  if (c.sender_choice) parts.push(el("p", { class: "small muted", text: `Sender chose to ${c.sender_choice}.` }));
+  if (c.status === "held") {
+    const approve = el("button", { class: "btn-primary", type: "button", text: "Release transfer" });
+    const reject = el("button", { class: "btn-danger", type: "button", text: "Block transfer" });
+    approve.addEventListener("click", () => decide(c.id, "approve"));
+    reject.addEventListener("click", () => decide(c.id, "reject"));
+    parts.push(el("div", { class: "actions" }, [approve, reject]));
+  } else if (c.analyst_decision) {
+    parts.push(el("p", { class: "small muted", text: `Decision recorded: ${c.analyst_decision === "approve" ? "released" : "blocked"} at ${c.decided_at}.` }));
+  }
+  $("case").replaceChildren(el("div", { class: "case" }, parts));
+}
+
+async function decide(id, decision) {
+  try {
+    await api(`/api/case/${id}/decision`, { method: "POST", body: JSON.stringify({ decision }) });
+  } catch (e) { showStatus(`Could not record decision: ${e.message}`, true); }
+  await renderCase();
+  await refreshQueue();
+}
+
+$("replay").addEventListener("click", async () => {
+  $("replay").disabled = true;
+  try {
+    if (running) await api("/api/replay/stop", { method: "POST" });
+    else await api("/api/replay/start", { method: "POST", body: JSON.stringify({ speed: Number($("speed").value) }) });
+  } catch (e) { showStatus(`Replay error: ${e.message}`, true); }
+  await refreshMetrics();
+});
+
+function every(ms, fn) {
+  const tick = async () => { try { await fn(); } catch (e) { /* transient; next tick retries */ } setTimeout(tick, ms); };
+  tick();
+}
+
+(async () => {
+  if (!(await waitUntilReady())) return;
+  every(1000, refreshMetrics);
+  every(1000, refreshFeed);
+  every(2000, refreshQueue);
+  every(3000, renderCase);   // picks up the Granite note when it arrives
+})();
+</script>
+</body>
+</html>
