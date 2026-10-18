@@ -4,10 +4,6 @@
 
 A trained XGBoost receiver-risk model with chosen decision thresholds and plain-language top reasons for each prediction.
 
-## Owner
-
-B (XGBoost)
-
 ## Inputs
 
 Feature tables from card 02.

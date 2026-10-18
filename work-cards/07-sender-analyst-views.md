@@ -4,10 +4,6 @@
 
 Two plain HTML/CSS/JS pages that follow `design.md`: the sender's mock transfer screen with the pause pop-up, and the analyst console.
 
-## Owner
-
-E (Frontend)
-
 ## Inputs
 
 Endpoints from card 06; `design.md`
@@ -50,4 +46,4 @@ If time is short, ship the sender view first and make the analyst view a simple 
 
 ## Status
 
-In progress: built and tested in a browser against the API on synthetic data; check on LinuxONE with the real model
+Done: both pages verified on IBM LinuxONE with the real model (sender story warns; analyst console works). See `build-status.md` → Work Card 07 Verification.

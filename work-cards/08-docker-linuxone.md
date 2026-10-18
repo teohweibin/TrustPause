@@ -4,10 +4,6 @@
 
 The backend and frontend run as a Docker container on the LinuxONE server, as evidence of containerised deployment.
 
-## Owner
-
-E (Docker)
-
 ## Inputs
 
 Working app from cards 06–07.

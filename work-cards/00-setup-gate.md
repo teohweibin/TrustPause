@@ -4,10 +4,6 @@
 
 Confirm the shared LinuxONE server, Jupyter and team access are ready before building.
 
-## Owner
-
-Team lead
-
 ## Checklist
 
 ### Server
@@ -26,15 +22,13 @@ Team lead
 - [x] Server resources noted: `free -h`, `nproc`
 - [x] `git --version` works in the Jupyter terminal (needed to push from the server)
 
-### Required labs
-- [x] Both IBM labs run (`Fraud_LSTM_Keras_TF.ipynb`, `Loan_Approval_Demo.ipynb`)
+### IBM labs (learning demos)
+- [x] Both IBM labs run as learning demos (`Fraud_LSTM_Keras_TF.ipynb`, `Loan_Approval_Demo.ipynb`); not a submission requirement
 - [x] Screenshots of both labs saved to `screenshots/labs/`
-- [ ] Confirmed on Discord which two labs count as mandatory
 
 ### Team
 - [x] Every member can SSH in and open Jupyter through their own tunnel
-- [ ] `.pem` shared only through a private channel (or members added their own public keys)
-- [ ] Roles assigned (see `build-blueprint.md` → Team Split)
+- [x] `.pem` key kept private: never committed (`*.pem` in `.gitignore` and `.dockerignore`) and shared with teammates only through private channels
 
 ## Commands
 
@@ -57,4 +51,4 @@ If the server is unreachable: stop the VM in the L1CC dashboard until SHUTOFF, s
 
 ## Status
 
-Mostly done: see unticked items.
+Done: all setup items complete on IBM LinuxONE.

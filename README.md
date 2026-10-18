@@ -208,4 +208,4 @@ The dataset is not included in this repository (`data/` is git-ignored).
 | DM Sans | UI font (Google Fonts) | https://fonts.google.com/specimen/DM+Sans |
 | Docker | s390x container on LinuxONE | https://www.docker.com |
 
-All TrustPause code was written during the IBM Z Datathon (Oct 17–18, 2026). The two IBM reference labs (`Fraud_LSTM_Keras_TF.ipynb`, `Loan_Approval_Demo.ipynb`) were completed as prerequisites (`screenshots/labs/`); no lab code is reused.
+All TrustPause code was written during the IBM Z Datathon (Oct 17–18, 2026). The two IBM reference labs (`Fraud_LSTM_Keras_TF.ipynb`, `Loan_Approval_Demo.ipynb`) were run to learn the platform (`screenshots/labs/`); no lab code is reused.

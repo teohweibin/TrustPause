@@ -4,10 +4,6 @@
 
 A small PyTorch GRU that scores the receiver's last 10 transactions, run on the Telum NNPA, with an honest CPU vs NNPA latency comparison.
 
-## Owner
-
-C (Sequence model + Telum)
-
 ## Inputs
 
 Receiver sequences from card 02.

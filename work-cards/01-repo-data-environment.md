@@ -4,10 +4,6 @@
 
 A GitHub repo cloned on the server at `~/shared/trustpause/`, with the folder layout, `.gitignore`, `requirements.txt`, and the dataset loaded and checked.
 
-## Owner
-
-A (Data & features)
-
 ## Inputs
 
 - `architecture.md` → File Expectations, Data / State Model
@@ -55,4 +51,4 @@ If the full file does not fit in memory, use `nrows` or sample whole days and re
 
 ## Status
 
-Not started
+Done: verified on IBM LinuxONE (see `build-status.md` → Work Card 01 Verification).

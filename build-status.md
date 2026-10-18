@@ -2,68 +2,76 @@
 
 ## Project
 
-- Name: TrustPause (working name)
-- Submission title: `[TeamName]_IBM Z Datathon 2026 Project — TrustPause`
+- Team: **Stats Power**
+- Name: TrustPause
+- Submission title: `Stats Power_IBM Z Datathon 2026 Project — TrustPause`
 - Theme: Theme 1, Real-Time AI for Critical Decisions
-- Build shape: Full-stack AI prototype on IBM LinuxONE (FastAPI + XGBoost + PyTorch/NNPA + Granite + 2 HTML views, Docker)
-- Current stage: Building
-- Current work card: `work-cards/07-sender-analyst-views.md` (built; check on LinuxONE), then 08 Docker and 09 video; in parallel 04 NNPA probe, 05, 06 stub, 07 mock, 09; finish open items in `work-cards/00-setup-gate.md` alongside
+- Build shape: Full-stack AI prototype on IBM LinuxONE (FastAPI + XGBoost + PyTorch/NNPA benchmark + Granite + 2 web views, Docker)
+- Repo: https://github.com/teohweibin/TrustPause (`main`); server copy at `~/shared/trustpause`
+- Current stage: **Submission prep**: everything is built and running on LinuxONE; the video and submission remain
+- Current work card: `work-cards/09-evidence-video-submission.md`
 
 ## Completed work cards
 
-- [ ] 00 LinuxONE setup gate (mostly done)
+- [x] 00 LinuxONE setup gate
 - [x] 01 Repo, data and environment
 - [x] 02 Feature pipeline
 - [x] 03 XGBoost model + reasons
 - [x] 04 Sequence model on Telum NNPA
 - [x] 05 Granite explainer
 - [x] 06 Real-time scorer, replay and API
-- [ ] 07 Sender and analyst views
+- [x] 07 Sender and analyst views
 - [x] 08 Docker on LinuxONE
-- [ ] 09 Evidence, README, video and submission
+- [ ] 09 Evidence, README, video and submission (README done; video, screenshots and submission remain)
 
-## In progress
+## Remaining
 
-- 00 Setup gate: remaining items (Discord lab confirmation, `.pem` sharing, roles)
-- 07 Views: `web/sender.html`, `web/analyst.html`, `web/style.css` built and browser-tested on synthetic data; check on LinuxONE pending
+- **3-minute video**: script, shot list, recording (must show the LinuxONE instance and the model running)
+- **Live screenshots**: sender warning, analyst console during replay, `uname -m` → `s390x`, `docker ps`, L1CC dashboard
+- **Architecture flowchart**: a teammate has it on their branch; merge into `main`
+- **Notebooks 02 and 03 outputs**: executed on the server but committed without outputs; commit the server copies with outputs
+- **Hack2Skill submission**: title, GitHub link, video, open-source links (listed in the README)
 
 ## Blockers
 
-- None recorded yet
+- None
 
 ## Decisions made
 
 - Theme: Theme 1 (Real-Time AI for Critical Decisions)
-- Stack: Python, pandas, XGBoost, PyTorch + torch_nnpa, llama.cpp + Granite, FastAPI, SQLite, plain HTML/CSS/JS, Docker
-- Dataset: IBM AML synthetic (`HI-Small_Trans.csv`), licence to verify
+- Stack: Python, pandas, XGBoost, PyTorch + torch_nnpa, llama.cpp + IBM Granite, FastAPI, SQLite, plain HTML/CSS/JS, Docker
+- Dataset: IBM AML synthetic (`HI-Small_Trans.csv`), licence CDLA-Sharing-1.0 (https://cdla.dev/sharing-1-0/)
 - Split: time-based by calendar day after dropping sparse days (< 1% of busiest day). HI-Small: drop Sep 11–18 (only ~1,100 rows, ~60% laundering); train Sep 1–6, val Sep 7–8, test Sep 9–10
 - Features: online `AccountState` (24 features, see `FEATURE_NAMES`). Flagged-account proximity via rolling counterparty sets instead of networkx. Labels act as reports: flag both accounts 24 h later, training-period labels only
-- Explanations: XGBoost `pred_contribs` (no `shap` package) → `src/reasons.py` reason codes
-- Decision bands: alert budget on validation (default pause top 0.5%, hold top 0.05%), stored in `models/thresholds.json`
-- LLM: Granite on LinuxONE only; no external AI APIs; no IDs in prompts
+- Model: XGBoost only for live decisions (validation chose ensemble weight 1.0; the GRU is kept as the NNPA benchmark)
+- Explanations: XGBoost `pred_contribs` (no `shap` package) → `src/reasons.py` reason codes; behavioural reasons first; sender view hides sender-side reasons and zero counts
+- Decision bands: alert budget on validation (pause top 0.5%, hold top 0.05%), stored in `models/thresholds.json`
+- LLM: IBM Granite on LinuxONE only; no external AI APIs; no IDs in prompts
+- Granite: analyst notes for held cases only (validated by `good_note()`); sender warnings always the reviewed EN/BM templates. Reason: the 350M base model copied the prompt example on LinuxONE
 - Storage: SQLite (`data/trustpause.db`, reset on API start, WAL, no fsync: demo data)
-- Live scoring: API warms `AccountState` with all history before the test period (same code and label cutoff as training), so live scores equal training scores; cached in `data/state_warm.pkl`
-- Granite: analyst notes for held cases only (validated by `good_note()`); sender warnings always the reviewed templates. Reason: the 350M base model copied the prompt example on LinuxONE
-- Demo recipients: chosen at startup by previewing demo-sender transfers (US-dollar accounts); A/C/E warned, B/D/F allowed (verified on LinuxONE)
-- Frontend: sender view + analyst view, served by FastAPI
-- Access: SSH tunnels (Jupyter 38888, app 8000); no public ports
-- Deployment: Docker on LinuxONE; judges see it in the video
-- Server Git: `~/shared/trustpause` always stays on `main`; personal branches use personal clones (e.g. `~/shared/trustpause-<name>`) with the dataset symlinked
+- Live scoring: API warms `AccountState` with all history before the test period (same code and label cutoff as training), so live scores equal training scores. The warm-state cache (`data/state_warm.pkl`) is off by default (saving it ran out of memory); enable with `TRUSTPAUSE_STATE_CACHE=1`
+- Sender-view transfers are scored without being recorded (`record=False`), so the demo behaves the same every time; replayed transactions are recorded
+- Demo recipients: chosen at startup by previewing demo-sender transfers (US-dollar accounts). Risky recipients must warn at 2+ scam-like amounts; the strongest becomes "Job agency" and its first warning amount drives the scam-message story. `/api/status` → `demo_check` shows the result
+- Sender view: fictional mobile bank (phone frame, scam message, keypad, purpose, security check, 997 NSRC hotline); analyst view: live stats, feed, hold queue, case detail with Release / Block
+- Access: SSH keys only; Jupyter (38888) and the API (8000) reached through SSH tunnels; no public ports
+- Secrets: the `.pem` key is never committed or shared publicly (`*.pem` in `.gitignore` and `.dockerignore`; no `.pem` in any commit); share it with teammates privately only
+- Models in Git: `models/xgb.json`, `thresholds.json`, `metrics.json`, `seq.pt` are committed (a `git stash -u` once hid the uncommitted ones)
+- Deployment: Docker on LinuxONE (s390x image from the L1CC Jupyter image; data, models and Granite mounted at runtime)
+- Server Git: `~/shared/trustpause` always stays on `main`; personal branches use personal clones (e.g. `~/shared/trustpause-<name>`) with the dataset symlinked. Restart the API after pulls that change `src/`
+- IBM labs: run as learning demos (not a submission requirement for this team)
 
 ## Last verified state
 
-- Server: ACTIVE, SSH works (user `linux1`)
-- Docker: installed and working
+- Server: ACTIVE, SSH works (user `linux1`); 3 CPUs, 7.8 GB RAM, no swap
+- Docker: installed; `trustpause` image builds and runs (s390x)
 - Jupyter: running in container `notebook`, reached via SSH tunnel
-- IBM labs: both run; screenshots in `screenshots/labs/`
-- Telum NNPA: present (`lscpu` → `nnpa`)
-- Libraries: xgboost 3.4.1, torch 2.11.0+cpu, torch_nnpa 1.5.0, tensorflow 2.18.1, llama_cpp_python 0.3.36, networkx 3.7, pandas 3.0.6, scikit-learn 1.9.0
-- FastAPI / Uvicorn: installed in the Jupyter container
-- Server CPU: 3 (`nproc`). `free` is not available inside the Jupyter container; run `free -h` in the SSH window
-- `torch_nnpa` usage: verified; `is_available()` and `is_telum2_available()` returned `True`; GRU forward passed on `nnpa:0`
-- Granite generation time: verified; English 3.77–4.24 s, BM 5.54–6.17 s, analyst note 7.88–11.95 s; maximum 11.95 s.
-- Dataset on server: `data/HI-Small_Trans.csv`, loading verified on LinuxONE.
-- GitHub repo: https://github.com/teohweibin/TrustPause (cloned on server at `~/shared/trustpause`); branch `xiaowei` merged into `main`
+- IBM labs: both run as learning demos; screenshots in `screenshots/labs/`
+- Telum NNPA: present (`lscpu` → `nnpa`); `torch_nnpa` `is_available()` and `is_telum2_available()` return `True`; GRU runs on `nnpa:0`
+- Libraries: xgboost 3.4.1, torch 2.11.0+cpu, torch_nnpa 1.5.0, tensorflow 2.18.1, llama_cpp_python 0.3.36, networkx 3.7, pandas 3.0.6, scikit-learn 1.9.0; FastAPI / Uvicorn installed
+- Granite: `granite-4.0-h-350m-base-be.f16.gguf`; English 3.77–4.24 s, BM 5.54–6.17 s, analyst note 7.88–11.95 s
+- Dataset on server: `data/HI-Small_Trans.csv`
+- API on LinuxONE (latest `main`): `stage: ready`; all six demo recipients `passed: true` (A/C/E warn at every amount $500–$5,000, scores 0.96–0.998; B/D/F allowed at every amount); story = Job agency, $500; story warning confirmed in the browser
+- GitHub `main` contains all code, trained models, notebooks, screenshots, README and Docker files
 
 ## Work Card 01 Verification
 
@@ -76,7 +84,6 @@
 - Test dates are later than training dates.
 - Exploration notebook executed on LinuxONE with no errors.
 - Git ignore checks passed for `data/`, `*.pem`, and `*.db`.
-- Mandatory-lab confirmation: Pending.
 
 ### Findings for Work Card 02
 
@@ -141,12 +148,12 @@
 - Granite timeout stop condition: not triggered
 - Informational runtime message about V-cache padding was observed; no generation failure occurred.
 
-## Measured results (fill in as you go)
+## Measured results
 
 - Feature computation per transaction (LinuxONE, single core): 25.8 µs
 
 - XGBoost PR-AUC: val 0.361, **test 0.254** (base rate 0.11%, ~230× lift); ROC-AUC val 0.982, test 0.974
-- Ensemble test PR-AUC:
+- Ensemble: validation chose XGBoost weight 1.0 (GRU test PR-AUC 0.005 vs XGBoost 0.254), so live decisions use XGBoost alone
 - Hold band (top 0.05% on val): test 0.049% of transfers held, **precision 52%, recall 23%** (val 62% / 29%)
 - Pause band (top 0.5% on val): test 0.70% of transfers paused, **precision 8%, recall 52%** (val 13% / 62%)
 - XGBoost single prediction on LinuxONE: p50 0.10 ms, p95 0.30 ms (best iteration 283, trained in 74 s)
@@ -171,6 +178,26 @@
 - Granite model was copied from the Jupyter container to `/home/linux1/granite/`.
 - `GRANITE_MODEL_PATH=/granite/granite-4.0-h-350m-base-be.f16.gguf` was set.
 - The Granite model was readable inside the `trustpause` container.
+
+## Work Card 06 Verification
+
+- `python -m src.scorer --verify 2000` → `MATCH` on LinuxONE (live scores equal training scores)
+- Warm-up: 4,214,445 historical transactions in ~100 s
+- End-to-end latency during replay (features + XGBoost + reasons): p50 0.30 ms, p95 0.72 ms
+- Endpoints checked through `/docs`: status, demo accounts, transfer, choice, replay start/stop, feed, queue, case, decision, metrics
+- Fixes made while verifying: opt-in warm-state cache (out of memory), demo recipients previewed for the demo sender, sender transfers not recorded, story amount checked to warn
+
+## Work Card 07 Verification
+
+- Both pages load on LinuxONE through the SSH tunnel; restyled to the team's fintech reference (DM Sans, mint, black pills, yellow highlight)
+- Sender view: scam message → transfer → security check → warning sheet with EN/BM and 997 hotline → cancel; safe recipients are sent
+- Analyst view: replay, live stats, feed, hold queue, case detail, Release / Block
+- Browser-tested locally at phone and desktop widths
+
+## README
+
+- Done: title, sourced Malaysian scam statistics (PDRM/CCID 2024 and Jan–Nov 2025, NSRC 2025), results, NNPA benchmark, limitations, architecture, privacy, demo, how to run (incl. Docker), dataset + CDLA-Sharing-1.0 licence, open-source list
+
 ## Next instruction for AI
 
 Read `START_HERE.md`, `build-status.md`, `build-blueprint.md`, `architecture.md`, `design.md` and the current work card. Implement only the current work card. Run its verification steps, update this file, and stop for the team's check.

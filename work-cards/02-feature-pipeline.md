@@ -4,10 +4,6 @@
 
 One `AccountState` class that produces receiver-side features for each transaction in time order, used for both training and live scoring.
 
-## Owner
-
-A (Data & features)
-
 ## Inputs
 
 - `src/data.py` from card 01

@@ -4,10 +4,6 @@
 
 A complete Hack2Skill submission: ≤ 3-minute video, GitHub repo with README, screenshots, and the required links.
 
-## Owner
-
-F (Pitch & evidence): **starts at H0**, collecting screenshots as other cards finish.
-
 ## Files likely touched
 
 `README.md`, `screenshots/`, `docs/flowchart.png` (optional)
@@ -64,4 +60,4 @@ At H22, submit whatever is ready, then improve and resubmit if the platform allo
 
 ## Status
 
-Not started
+In progress: README done; video, live screenshots, flowchart merge and Hack2Skill submission remain.

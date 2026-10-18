@@ -60,19 +60,6 @@ Calm, trustworthy, clearly-mock banking transfer screen + clean three-panel oper
 
 See `architecture.md` → File Expectations.
 
-## Team Split
-
-| Role | Owns | Work cards |
-|---|---|---|
-| **A. Data & features** | Dataset, time split, `features.py` | 01, 02 |
-| **B. XGBoost** | Training, thresholds, reasons | 03 |
-| **C. Sequence model + Telum** | GRU, NNPA, latency benchmark | 04 |
-| **D. Granite** | Prompts EN/BM, privacy-safe input, fallback | 05 |
-| **E. API, frontend, Docker** | FastAPI, replay, both views, container | 06, 07, 08 |
-| **F. Pitch & evidence** | Screenshots, README, flowchart, video, submission | 09 (starts at H0) |
-
-With 4 people: merge B+C and E+F.
-
 ## Work Card Plan
 
 | Card | Title | Depends on | Target hours |

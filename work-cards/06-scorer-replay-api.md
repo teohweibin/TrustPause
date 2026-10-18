@@ -4,10 +4,6 @@
 
 A FastAPI backend that scores transactions live (replay and sender requests), applies the decision bands, runs Granite in the background for Pause/Hold, stores everything in SQLite, and exposes the endpoints in `architecture.md`.
 
-## Owner
-
-E (API)
-
 ## Inputs
 
 `src/features.py`, `models/xgb.json`, `models/thresholds.json`, `src/explain.py`, optional `models/seq.pt`
@@ -55,4 +51,4 @@ If threading causes problems, run replay as a separate process writing to SQLite
 
 ## Status
 
-In progress: code written and tested end to end on synthetic data; run on LinuxONE pending
+Done: verified on IBM LinuxONE (`--verify` → MATCH; API ready; all demo recipients pass). See `build-status.md` → Work Card 06 Verification.

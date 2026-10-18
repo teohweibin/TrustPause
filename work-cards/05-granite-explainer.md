@@ -4,10 +4,6 @@
 
 `explain.py` turns reason codes into a short sender warning (English + Bahasa Malaysia) and an analyst note using IBM Granite running locally, with no personal data in the prompt.
 
-## Owner
-
-D (Granite)
-
 ## Inputs
 
 - Granite loading approach and model file location from `Loan_Approval_Demo.ipynb` (read it; write our own code)
