@@ -15,7 +15,7 @@
 - [x] 01 Repo, data and environment
 - [x] 02 Feature pipeline
 - [x] 03 XGBoost model + reasons
-- [ ] 04 Sequence model on Telum NNPA
+- [x] 04 Sequence model on Telum NNPA
 - [x] 05 Granite explainer
 - [ ] 06 Real-time scorer, replay and API
 - [ ] 07 Sender and analyst views
@@ -59,7 +59,7 @@
 - Libraries: xgboost 3.4.1, torch 2.11.0+cpu, torch_nnpa 1.5.0, tensorflow 2.18.1, llama_cpp_python 0.3.36, networkx 3.7, pandas 3.0.6, scikit-learn 1.9.0
 - FastAPI / Uvicorn: installed in the Jupyter container
 - Server CPU: 3 (`nproc`). `free` is not available inside the Jupyter container; run `free -h` in the SSH window
-- `torch_nnpa` usage: not tested
+- `torch_nnpa` usage: verified; `is_available()` and `is_telum2_available()` returned `True`; GRU forward passed on `nnpa:0`
 - Granite generation time: verified; English 3.77–4.24 s, BM 5.54–6.17 s, analyst note 7.88–11.95 s; maximum 11.95 s.
 - Dataset on server: `data/HI-Small_Trans.csv`, loading verified on LinuxONE.
 - GitHub repo: https://github.com/teohweibin/TrustPause (cloned on server at `~/shared/trustpause`); branch `xiaowei` merged into `main`
@@ -109,6 +109,21 @@
 - Highest-scored normal transfer is held (sender linked to a reported case): good demo moment for human review.
 - Reasons: behavioural reasons first, generic payment properties only as filler; each reason has `about` (receiver / sender / payment). `audience="sender"` hides sender-side reasons for the sender view; the analyst view shows all.
 
+## Work Card 04 Verification
+
+- Implementation: `src/train_seq.py`
+- Model: PyTorch GRU, sequence length 10, hidden size 32
+- Training sample: 100,000 sequences; 2,530 positive and 97,470 negative
+- Model artifact: `models/seq.pt`
+- Notebook: `notebooks/04_sequence_nnpa.ipynb`
+- Notebook audit: 4 code cells, 0 unexecuted cells, 0 error cells
+- Sequence PR-AUC: validation `0.010882`; test `0.005142`
+- XGBoost PR-AUC: validation `0.360805`; test `0.254146`
+- Validation-selected ensemble XGBoost weight: `1.0`
+- CPU/NNPA output comparison: `outputs_close: True`; maximum absolute difference `0.000244140625`
+- NNPA latency chart: `screenshots/sequence_latency.png`
+- NNPA hardware evidence: `lscpu | grep -io nnpa` returned `nnpa`
+
 ## Work Card 05 Verification
 
 - Implementation: `src/explain.py`
@@ -135,7 +150,7 @@
 - Pause band (top 0.5% on val): test 0.70% of transfers paused, **precision 8%, recall 52%** (val 13% / 62%)
 - XGBoost single prediction on LinuxONE: p50 0.10 ms, p95 0.30 ms (best iteration 283, trained in 74 s)
 - End-to-end scoring latency p50 / p95 (card 06):
-- GRU latency CPU vs NNPA (batch 1 / 64):
+- GRU latency CPU vs NNPA over 1,000 runs: CPU batch 1 p50/p95 `0.171/0.192 ms`; CPU batch 64 `1.693/1.870 ms`; NNPA batch 1 `0.082/0.093 ms`; NNPA batch 64 `0.131/0.140 ms`
 - Granite time per output: English 3.77–4.24 s; Bahasa Malaysia 5.54–6.17 s; analyst note 7.88–11.95 s; maximum 11.95 s.
 
 ## Next instruction for AI
