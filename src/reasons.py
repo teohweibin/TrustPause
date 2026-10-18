@@ -88,6 +88,11 @@ GENERIC = {"payment_format", "receiving_currency", "log_amount", "hour_of_day",
 # Reasons about the paying account. The sender view hides these (the sender is
 # the person being protected); the analyst view shows everything.
 SENDER_SIDE = {"src_flagged", "src_unique_receivers_24h", "src_out_count_24h"}
+# Activity counts. A zero ("received no transfers in the last hour") can raise the
+# score, but reads oddly as a warning, so the sender view skips zero counts.
+COUNTS = {"dst_in_count_1h", "dst_in_count_24h", "dst_unique_senders_24h", "dst_out_count_1h",
+          "dst_out_count_24h", "dst_unique_receivers_24h", "dst_flagged_senders_24h",
+          "dst_flagged_receivers_24h", "dst_pass_through_1h", "dst_pass_through_24h"}
 
 
 def about(feature):
@@ -112,14 +117,16 @@ def top_reasons(contribs, values, feature_names, k=3, audience="analyst"):
 
     contribs: one row of `pred_contribs` (last column is the bias).
     values: the matching feature values.
-    audience: "analyst" (all reasons) or "sender" (no reasons about the paying account).
+    audience: "analyst" (all reasons) or "sender" (no reasons about the paying account,
+    no zero activity counts).
     Behavioural reasons come first, by contribution; generic payment properties
     only fill remaining slots.
     """
     contribs = np.asarray(contribs)[: len(feature_names)]
     candidates = [j for j in np.argsort(-contribs) if contribs[j] > 0]
     if audience == "sender":
-        candidates = [j for j in candidates if feature_names[j] not in SENDER_SIDE]
+        candidates = [j for j in candidates if feature_names[j] not in SENDER_SIDE
+                      and not (feature_names[j] in COUNTS and values[j] == 0)]
     candidates.sort(key=lambda j: feature_names[j] in GENERIC)  # stable: keeps contribution order
 
     out, seen = [], set()

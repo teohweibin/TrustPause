@@ -158,18 +158,26 @@ class AccountState:
             self.next_sweep = now + SWEEP_EVERY
 
     def update_and_features(self, now, src, dst, amount, amount_paid,
-                            payment_format, receiving_currency, payment_currency, label=None):
-        """Return features for this transaction (from earlier history only), then record it."""
+                            payment_format, receiving_currency, payment_currency, label=None, record=True):
+        """Return features for this transaction (from earlier history only), then record it.
+
+        record=False previews the features without changing any account (used to
+        choose demo recipients); expiring old events on the way is harmless.
+        """
         self._housekeeping(now)
         accounts = self.accounts
 
         d = accounts.get(dst)
         dst_seen = d is not None
         if d is None:
-            d = accounts[dst] = _Account(now)
+            d = _Account(now)
+            if record:
+                accounts[dst] = d
         s = accounts.get(src)
         if s is None:
-            s = accounts[src] = _Account(now)
+            s = d if src == dst else _Account(now)
+            if record:
+                accounts[src] = s
 
         d.expire(now)
         if s is not d:
@@ -206,6 +214,8 @@ class AccountState:
             sum(1 for p in in_24h_parties if p in flagged) if flagged else 0,
             sum(1 for p in out_24h_parties if p in flagged) if flagged else 0,
         ]
+        if not record:
+            return features
 
         s.out_1h.add(now, dst, amount_paid)
         s.out_24h.add(now, dst, amount_paid)

@@ -94,6 +94,14 @@ class Scorer:
             return "pause"
         return "allow"
 
+    def preview(self, txn):
+        """XGBoost score for txn without recording it in the account state."""
+        with self.lock:
+            feats = self.state.update_and_features(
+                to_seconds(txn["ts"]), txn["src"], txn["dst"], txn["amount"], txn["amount_paid"],
+                txn["payment_format"], txn["receiving_currency"], txn["payment_currency"], None, record=False)
+            return float(self.booster.inplace_predict(np.asarray(feats, dtype=np.float32).reshape(1, -1))[0])
+
     def score(self, txn):
         """txn: dict with ts, src, dst, amount, amount_paid, payment_format, receiving_currency, payment_currency."""
         with self.lock:

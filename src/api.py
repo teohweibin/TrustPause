@@ -43,29 +43,59 @@ GRANITE_REPLAY_BACKLOG = 5
 _job_order = itertools.count()
 
 
-def pick_demo_accounts(rows, state, thresholds):
-    """Three receivers the model rates risky and three it rates safe, from the test period."""
+DEMO_AMOUNTS = (100, 1000, 10000)
+
+
+def pick_demo_accounts(rows, scorer, clock):
+    """Three receivers that stay risky and three that stay safe for a DEMO_SENDER transfer.
+
+    Candidates come from the test period; each is checked by previewing a demo
+    transfer at several amounts (nothing is recorded), because a brand-new
+    sender scores differently from the real senders in the data.
+    """
     scores = pd.read_pickle(ROOT / "data" / "xgb_scores.pkl")
     t = rows.join(scores["score_xgb"], how="inner")
+    pause = scorer.thresholds["pause"]
+
+    def profile(dst):
+        incoming = t[t["dst"] == dst]
+        return {"id": dst,
+                "payment_format": incoming["payment_format"].mode().iloc[0],
+                "currency": incoming["receiving_currency"].mode().iloc[0]}
+
+    def preview_scores(account):
+        return [scorer.preview({
+            "ts": clock, "src": DEMO_SENDER, "dst": account["id"], "amount": a, "amount_paid": a,
+            "payment_format": account["payment_format"], "receiving_currency": account["currency"],
+            "payment_currency": account["currency"]}) for a in DEMO_AMOUNTS]
 
     risky = t[t["label"] == 1].sort_values("score_xgb", ascending=False)
-    risky = risky.assign(flagged=risky["dst"].isin(state.flagged)).sort_values(
+    risky = risky.assign(flagged=risky["dst"].isin(scorer.state.flagged)).sort_values(
         ["flagged", "score_xgb"], ascending=False)
-    high = list(dict.fromkeys(risky["dst"]))[:3]
-
     per_dst = t.groupby("dst").agg(n=("label", "size"), bad=("label", "sum"), top=("score_xgb", "max"))
-    safe = per_dst[(per_dst["bad"] == 0) & (per_dst["top"] < thresholds["pause"])]
-    safe = safe[~safe.index.isin(state.flagged)].sort_values("n", ascending=False)
-    low = list(safe.index[:3])
+    safe = per_dst[(per_dst["bad"] == 0) & (per_dst["top"] < pause) & ~per_dst.index.isin(scorer.state.flagged)]
 
-    accounts = []
-    for label, dst in [*zip(HIGH_LABELS, high), *zip(LOW_LABELS, low)]:
-        incoming = t[t["dst"] == dst]
-        accounts.append({
-            "id": dst, "label": label,
-            "payment_format": incoming["payment_format"].mode().iloc[0],
-            "currency": incoming["receiving_currency"].mode().iloc[0],
-        })
+    def choose(candidates, passes, rank):
+        """First 3 candidates that pass; if fewer, fill with the best-ranked of the rest."""
+        chosen, rest = [], []
+        for dst in candidates:
+            account = profile(dst)
+            previews = preview_scores(account)
+            (chosen if passes(previews) else rest).append((rank(previews), account))
+            if len(chosen) == 3:
+                break
+        if len(chosen) < 3:
+            print(f"Only {len(chosen)} demo recipients passed; filling with closest candidates", flush=True)
+            chosen += sorted(rest, key=lambda r: r[0])[: 3 - len(chosen)]
+        return [account for _, account in chosen]
+
+    high = choose(list(dict.fromkeys(risky["dst"]))[:60],
+                  lambda p: min(p) >= pause, lambda p: -min(p))
+    low = choose(safe.sort_values("n", ascending=False).index[:200],
+                 lambda p: max(p) < pause, lambda p: max(p))
+
+    accounts = [{**a, "label": label, "expected": "warn"} for label, a in zip(HIGH_LABELS, high)]
+    accounts += [{**a, "label": label, "expected": "allow"} for label, a in zip(LOW_LABELS, low)]
     return sorted(accounts, key=lambda a: a["label"])
 
 
@@ -114,7 +144,8 @@ def load():
         scorer = Scorer(state)
         rows = test_rows(test)
         del test
-        app_state["demo_accounts"] = pick_demo_accounts(rows, state, scorer.thresholds)
+        app_state["stage"] = "choosing demo recipients"
+        app_state["demo_accounts"] = pick_demo_accounts(rows, scorer, rows["ts"].iloc[0])
         app_state["store"] = Store(ROOT / "data" / "trustpause.db")
         app_state["scorer"] = scorer
         app_state["replayer"] = Replayer(rows, process)
