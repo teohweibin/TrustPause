@@ -1,12 +1,10 @@
-# [TeamName]_IBM Z Datathon 2026 Project — TrustPause
+# Stats Power_IBM Z Datathon 2026 Project — TrustPause
 
 **Real-time scam interception on IBM LinuxONE.** TrustPause checks the *receiving* account the moment someone presses Send, and gives them a clear warning before the money leaves. Every decision is made in under a millisecond on IBM LinuxONE, explained in plain language, and backed by a human analyst for the riskiest cases.
 
 - **Theme:** Theme 1, Real-Time AI for Critical Decisions (Detect. Decide. Respond.), under **AI for Good**
 - **Platform:** IBM LinuxONE Community Cloud (s390x, Ubuntu 24.04) with the **Telum on-chip AI accelerator (NNPA)**
 - **Event code:** SSF2026
-
-> Replace `[TeamName]` with the team name before submitting (the rules require it in the title).
 
 ---
 
@@ -16,7 +14,17 @@ In most scams the **victim sends the money themselves**: a fake job offer, an in
 
 The signal is on the **receiving** side: accounts that suddenly collect money from many unrelated people, accounts that are new to the sender, and accounts linked to earlier reported cases.
 
-<!-- TODO before submission: add sourced figures for Malaysian scam losses and recovery rate, with links. -->
+**Scams in Malaysia are growing fast, and very little money comes back:**
+
+| Figure | Value | Source |
+|---|---|---|
+| Online crime losses, Jan–Nov 2025 | **over RM2.7 billion** across **67,735 cases** | Royal Malaysia Police / Bukit Aman CCID, via [The Vibes, 8 Dec 2025](https://www.thevibes.com/articles/news/116658/malaysia-hit-with-over-67000-online-crime-cases-in-11-months-losses-surpass-rm2.7-billion) |
+| Scam losses, full year 2024 | **RM1.6 billion** across **35,368 cases** | Bukit Aman CCID director, via [Bernama, 3 Mar 2025](https://bernama.com/en/news.php?id=2398423) |
+| Largest loss category, Jan–Nov 2025 | Non-existent investment schemes: **over RM1.37 billion** | [The Vibes, 8 Dec 2025](https://www.thevibes.com/articles/news/116658/malaysia-hit-with-over-67000-online-crime-cases-in-11-months-losses-surpass-rm2.7-billion) |
+| Accounts frozen by the National Scam Response Centre (997) in 2025 | **138,915** accounts, from **146,167** complaint calls | Home Minister, via [Asia News Network, 4 Mar 2026](https://asianews.network/?p=260552) |
+| Money saved from syndicates in 2025 | **RM34.05 million**; **RM6.65 million** returned to victims (up from RM508,479 in 2024) | Home Minister, via [Asia News Network, 4 Mar 2026](https://asianews.network/?p=260552) |
+
+In 11 months of 2025, reported losses were already **about 70% higher than the whole of 2024**. The amounts saved and returned are a tiny share of what was lost (the figures come from different agencies and periods, so read the comparison as an order of magnitude). Once money leaves the victim's account, it is very hard to get back. TrustPause acts **before** it leaves.
 
 **Who it protects:** ordinary people sending money, especially the elderly, students and first-time digital banking users targeted by job, investment and impersonation scams. **Who uses it:** a bank's fraud analysts, who review held transfers.
 
@@ -176,7 +184,7 @@ To run a second copy next to an existing API (e.g. for checking), add `python3 -
 **IBM Transactions for Anti Money Laundering (AML)**, file `HI-Small_Trans.csv`: synthetic bank transfers with laundering labels, created by IBM researchers.
 - Kaggle: https://www.kaggle.com/datasets/ealtman2019/ibm-transactions-for-anti-money-laundering-aml
 - Paper: Altman et al., *Realistic Synthetic Financial Transactions for Anti-Money Laundering Models*, NeurIPS 2023 Datasets and Benchmarks.
-- Licence: see the Kaggle page. <!-- TODO: state the licence name. -->
+- Licence: [Community Data License Agreement – Sharing, Version 1.0 (CDLA-Sharing-1.0)](https://cdla.dev/sharing-1-0/), as listed on Kaggle.
 
 The dataset is not included in this repository (`data/` is git-ignored).
 
@@ -201,11 +209,3 @@ The dataset is not included in this repository (`data/` is git-ignored).
 | Docker | s390x container on LinuxONE | https://www.docker.com |
 
 All TrustPause code was written during the IBM Z Datathon (Oct 17–18, 2026). The two IBM reference labs (`Fraud_LSTM_Keras_TF.ipynb`, `Loan_Approval_Demo.ipynb`) were completed as prerequisites (`screenshots/labs/`); no lab code is reused.
-
-## Team
-
-<!-- TODO: names and roles, e.g. data and features, models, Granite, API and frontend, Docker, pitch. -->
-
-| Member | Role |
-|---|---|
-| | |
