@@ -45,7 +45,8 @@ All libraries below were confirmed installed in the L1CC Jupyter image (`pip lis
 |---|---|
 | `src/data.py` | Load dataset, clean columns, time-ordered split (train / validation / test by date) |
 | `src/features.py` | `AccountState` class: rolling in/out counts and sums (1h, 24h), unique senders (fan-in), unique receivers (fan-out), pass-through ratio (out ÷ in, 1h and 24h), first-seen time; proximity to flagged accounts via rolling counterparty sets (labels act as reports: flag both accounts 24 h later, training period only). See `FEATURE_NAMES`. Same code used offline (training) and online (scoring), so there is no train/serve skew |
-| `src/train_xgb.py` | Train XGBoost, choose thresholds on validation, save `models/xgb.json` |
+| `src/train_xgb.py` | Train XGBoost (`python -m src.train_xgb`), choose pause/hold thresholds by alert budget on validation, save `models/xgb.json`, `thresholds.json`, `metrics.json` |
+| `src/reasons.py` | Top-3 reasons per transaction from XGBoost `pred_contribs`, as `{code, feature, value, contribution, sentence}`; sentences use counts and amounts only |
 | `src/train_seq.py` | Train GRU over the receiver's last N=10 transactions, save `models/seq.pt` |
 | `src/scorer.py` | Load models, score one transaction, ensemble, apply decision bands, return reasons |
 | `src/explain.py` | Build privacy-safe prompt from reason codes + aggregates, call Granite, return `warning_en`, `warning_bm`, `analyst_note`; template fallback if Granite is slow/unavailable |
@@ -70,13 +71,15 @@ All libraries below were confirmed installed in the L1CC Jupyter image (`pip lis
 | `transactions` | `id, ts, src, dst, amount, payment_format, score_xgb, score_seq, score, decision, reasons_json, latency_ms, source ('replay' or 'sender')` |
 | `cases` | `id, txn_id, status ('paused','held','approved','rejected'), warning_en, warning_bm, analyst_note, analyst_decision, decided_at` |
 
-**Decision bands** (tune on validation set):
+**Decision bands** are set by an alert budget on the validation set (scores are not calibrated probabilities because of `scale_pos_weight`). Defaults, stored in `models/thresholds.json`:
 
-| Score | Decision |
-|---|---|
-| < 0.30 | Allow |
-| 0.30 – 0.70 | Pause & warn |
-| > 0.70 | Hold for analyst |
+| Score | Decision | Default budget |
+|---|---|---|
+| below `pause` | Allow | |
+| `pause` – `hold` | Pause & warn | top 0.5% of transfers |
+| at or above `hold` | Hold for analyst | top 0.05% of transfers |
+
+Change with `python -m src.train_xgb --pause-rate ... --hold-rate ...` after reading the alert-budget table in `notebooks/03_xgboost.ipynb`.
 
 ## Storage Logic
 

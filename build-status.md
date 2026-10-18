@@ -25,6 +25,7 @@
 ## In progress
 
 - 00 Setup gate: remaining items (Discord lab confirmation, `.pem` sharing, roles)
+- 03 XGBoost: `src/train_xgb.py`, `src/reasons.py`, `notebooks/03_xgboost.ipynb` written and tested on synthetic data; run on LinuxONE pending
 
 ## Blockers
 
@@ -37,7 +38,8 @@
 - Dataset: IBM AML synthetic (`HI-Small_Trans.csv`), licence to verify
 - Split: time-based by calendar day after dropping sparse days (< 1% of busiest day). HI-Small: drop Sep 11–18 (only ~1,100 rows, ~60% laundering); train Sep 1–6, val Sep 7–8, test Sep 9–10
 - Features: online `AccountState` (24 features, see `FEATURE_NAMES`). Flagged-account proximity via rolling counterparty sets instead of networkx. Labels act as reports: flag both accounts 24 h later, training-period labels only
-- Explanations: XGBoost `pred_contribs` (no `shap` package)
+- Explanations: XGBoost `pred_contribs` (no `shap` package) → `src/reasons.py` reason codes
+- Decision bands: alert budget on validation (default pause top 0.5%, hold top 0.05%), stored in `models/thresholds.json`
 - LLM: Granite on LinuxONE only; no external AI APIs; no IDs in prompts
 - Storage: SQLite
 - Frontend: sender view + analyst view, served by FastAPI
