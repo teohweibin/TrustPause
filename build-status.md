@@ -16,7 +16,7 @@
 - [x] 02 Feature pipeline
 - [x] 03 XGBoost model + reasons
 - [ ] 04 Sequence model on Telum NNPA
-- [ ] 05 Granite explainer
+- [x] 05 Granite explainer
 - [ ] 06 Real-time scorer, replay and API
 - [ ] 07 Sender and analyst views
 - [ ] 08 Docker on LinuxONE
@@ -60,7 +60,7 @@
 - FastAPI / Uvicorn: installed in the Jupyter container
 - Server CPU: 3 (`nproc`). `free` is not available inside the Jupyter container; run `free -h` in the SSH window
 - `torch_nnpa` usage: not tested
-- Granite generation time: not measured
+- Granite generation time: verified; English 3.77–4.24 s, BM 5.54–6.17 s, analyst note 7.88–11.95 s; maximum 11.95 s.
 - Dataset on server: `data/HI-Small_Trans.csv`, loading verified on LinuxONE.
 - GitHub repo: https://github.com/teohweibin/TrustPause (cloned on server at `~/shared/trustpause`); branch `xiaowei` merged into `main`
 
@@ -108,6 +108,22 @@
 - Test below validation as expected (flags frozen after training period); pause band drifts from 0.5% to 0.70% on test. Pitch: thresholds are re-tuned regularly.
 - Highest-scored normal transfer is held (sender linked to a reported case): good demo moment for human review.
 - Reasons: behavioural reasons first, generic payment properties only as filler; each reason has `about` (receiver / sender / payment). `audience="sender"` hides sender-side reasons for the sender view; the analyst view shows all.
+
+## Work Card 05 Verification
+
+- Implementation: `src/explain.py`
+- Model runtime: local `llama_cpp_python` Granite using `GRANITE_MODEL_PATH`
+- Model: `/home/ibm-user/granite-4.0-h-350m-base-be.f16.gguf`
+- Five reason combinations generated English warning, Bahasa Malaysia warning, and analyst note.
+- All analyst notes contain exactly three bullets: Pattern, Evidence, and Suggested action.
+- Prompt privacy check: `prompt_has_identifiers: False`
+- Malay speaker review: Approved
+- Notebook: `notebooks/05_granite.ipynb`
+- Notebook audit: 4 code cells, 0 unexecuted cells, 0 error cells
+- Privacy screenshot: `screenshots/labs/granite_prompt_privacy.png`
+- Maximum observed generation time: 11.95 seconds
+- Granite timeout stop condition: not triggered
+- Informational runtime message about V-cache padding was observed; no generation failure occurred.
 
 ## Measured results (fill in as you go)
 
