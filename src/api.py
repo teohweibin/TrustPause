@@ -25,10 +25,28 @@ from .scorer import ROOT, USE_CACHE, CACHE, Scorer, cache_key, load_history, sav
 from .stream import Replayer
 from .templates import template_texts
 
-try:  # card 05: explain(payload) -> {"warning_en", "warning_bm", "analyst_note", "used_granite", ...}
+try:  # card 05: explain(payload) -> {"analyst_note", "used_granite", ...}
     from .explain import explain as granite_explain
 except ImportError:
     granite_explain = None
+
+# Sender warnings always come from the reviewed templates (src/templates.py).
+# Granite only drafts the analyst note for held cases, and only a note that
+# passes good_note() replaces the template note.
+NOTE_LABELS = ("- Pattern:", "- Evidence:", "- Suggested action:")
+NOTE_REJECT = ("reason codes ", "unusual transfer activity", "the supplied risk reasons",
+               "review and pause if needed", "pause it if the evidence is concerning")
+
+
+def good_note(note):
+    """Three labelled bullets with real content: not explain.py's fallback, not the prompt example."""
+    if not note:
+        return False
+    lines = [line.strip() for line in note.splitlines() if line.strip()]
+    if len(lines) != 3 or not all(line.startswith(label) for line, label in zip(lines, NOTE_LABELS)):
+        return False
+    lowered = note.lower()
+    return not any(phrase in lowered for phrase in NOTE_REJECT)
 
 WEB = ROOT / "web"
 DEMO_SENDER = "DEMO_SENDER"
@@ -36,14 +54,15 @@ HIGH_LABELS = ["Recipient A — Online seller", "Recipient C — Investment agen
 LOW_LABELS = ["Recipient B — Utility company", "Recipient D — Grocery store", "Recipient F — Family member"]
 
 app_state = {"stage": "starting", "error": None, "granite_last": None}
-# Granite is slow (seconds per case): sender transfers go first; replayed holds only
-# when the queue is short; replayed pauses never (no sender is watching them).
+# Granite is slow (seconds per case) and only writes analyst notes, so only held
+# cases (the analyst queue) are sent: the sender's first, replayed ones while the queue is short.
 granite_jobs = queue.PriorityQueue()
 GRANITE_REPLAY_BACKLOG = 5
 _job_order = itertools.count()
 
 
 DEMO_AMOUNTS = (100, 1000, 10000)
+DEMO_CURRENCY = "US Dollar"
 
 
 def pick_demo_accounts(rows, scorer, clock):
@@ -55,6 +74,10 @@ def pick_demo_accounts(rows, scorer, clock):
     """
     scores = pd.read_pickle(ROOT / "data" / "xgb_scores.pkl")
     t = rows.join(scores["score_xgb"], how="inner")
+    # One currency keeps the demo screen simple ("USD (demo)"); fall back to all if too few.
+    usd = t[t["receiving_currency"] == DEMO_CURRENCY]
+    if usd["label"].sum() >= 3 and usd["dst"].nunique() >= 50:
+        t = usd
     pause = scorer.thresholds["pause"]
 
     def profile(dst):
@@ -73,7 +96,10 @@ def pick_demo_accounts(rows, scorer, clock):
     risky = risky.assign(flagged=risky["dst"].isin(scorer.state.flagged)).sort_values(
         ["flagged", "score_xgb"], ascending=False)
     per_dst = t.groupby("dst").agg(n=("label", "size"), bad=("label", "sum"), top=("score_xgb", "max"))
-    safe = per_dst[(per_dst["bad"] == 0) & (per_dst["top"] < pause) & ~per_dst.index.isin(scorer.state.flagged)]
+    clean = per_dst[(per_dst["bad"] == 0) & ~per_dst.index.isin(scorer.state.flagged)]
+    # Busy receivers that never scored high first, then the lowest-scoring of the rest.
+    safe = list(clean[clean["top"] < pause].sort_values("n", ascending=False).index[:200])
+    safe += list(clean[clean["top"] >= pause].sort_values("top").index[:50])
 
     def choose(candidates, passes, rank):
         """First 3 candidates that pass; if fewer, fill with the best-ranked of the rest."""
@@ -91,7 +117,7 @@ def pick_demo_accounts(rows, scorer, clock):
 
     high = choose(list(dict.fromkeys(risky["dst"]))[:60],
                   lambda p: min(p) >= pause, lambda p: -min(p))
-    low = choose(safe.sort_values("n", ascending=False).index[:200],
+    low = choose(safe,
                  lambda p: max(p) < pause, lambda p: max(p))
 
     accounts = [{**a, "label": label, "expected": "warn"} for label, a in zip(HIGH_LABELS, high)]
@@ -113,15 +139,13 @@ def process(txn, source):
         result.update(warning_en=None, warning_bm=None, analyst_note=None)
     txn_id, case_id = store.add_transaction(txn, result, source)
     result.update(txn_id=txn_id, case_id=case_id)
-    wanted = source == "sender" or (result["decision"] == "hold" and granite_jobs.qsize() < GRANITE_REPLAY_BACKLOG)
+    wanted = result["decision"] == "hold" and (source == "sender" or granite_jobs.qsize() < GRANITE_REPLAY_BACKLOG)
     if case_id and granite_explain and wanted:
         priority = 0 if source == "sender" else 1
-        # explain.py builds every text from `reasons`, and the warnings go to the
-        # sender, so it gets the sender-safe list; the analyst list rides along.
         granite_jobs.put((priority, next(_job_order), case_id, {
             "decision": result["decision"], "score": result["score"],
             "amount_band": amount_band(txn["amount"]), "currency": txn["receiving_currency"],
-            "reasons": result["sender_reasons"], "analyst_reasons": result["reasons"],
+            "reasons": result["reasons"],
         }))
     return result
 
@@ -131,14 +155,15 @@ def granite_worker():
         _, _, case_id, payload = granite_jobs.get()
         try:
             texts = granite_explain(payload)
-            used = texts.get("used_granite", True)
-            app_state["granite_last"] = {"case_id": case_id, "used_granite": used,
-                                         "seconds": texts.get("generation_seconds")}
-            if used:  # otherwise explain() returned its own generic fallback: keep our template
-                app_state["store"].update_texts(case_id, texts, "granite")
+            note = texts.get("analyst_note")
+            accepted = bool(texts.get("used_granite", True)) and good_note(note)
+            app_state["granite_last"] = {"case_id": case_id, "used_granite": texts.get("used_granite"),
+                                         "note_accepted": accepted, "seconds": texts.get("generation_seconds")}
+            if accepted:
+                app_state["store"].update_note(case_id, note, "granite")
             else:
-                print(f"Granite not used for case {case_id} (model not loaded or timed out); "
-                      "keeping template text", flush=True)
+                print(f"Granite note for case {case_id} not used (fallback, example copy or bad format); "
+                      "keeping template note", flush=True)
         except Exception as exc:  # keep the template text
             app_state["granite_last"] = {"case_id": case_id, "used_granite": False, "error": repr(exc)}
             print(f"Granite failed for case {case_id}: {exc}", flush=True)
@@ -213,7 +238,7 @@ def status():
 
 @app.get("/api/demo-accounts")
 def demo_accounts():
-    return [{"id": a["id"], "label": a["label"]} for a in ready()["demo_accounts"]]
+    return [{"id": a["id"], "label": a["label"], "currency": a["currency"]} for a in ready()["demo_accounts"]]
 
 
 @app.post("/api/transfer")

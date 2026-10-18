@@ -2,18 +2,17 @@
 
 ## Design Inspiration
 
-Own direction: **"calm safety layer"**: a modern mobile banking transfer screen (sender view) and a clean operations console (analyst view). Generic patterns only; no specific bank or product is copied.
+Team reference: a modern fintech mobile app concept (soft mint background, white rounded cards, black pill controls, one bright yellow highlight card, rounded geometric sans). We take its **style, colour and type only**; layout and features are our own. No specific bank or product is copied.
 
-Both views will be **recorded for a 3-minute video at 1920×1080**, so readability on a screen recording matters more than fine detail.
+Both views will be **recorded for a 3-minute video**, so readability on a screen recording matters more than fine detail.
 
 ## What We Borrow
 
-- **Layout:** banking-app transfer flow (recipient → amount → Send) for the sender; three-panel console (feed, queue, case detail) for the analyst
-- **Spacing:** generous; 8 px grid; 24 px card padding
-- **Colour mood:** calm, trustworthy, neutral with one accent
-- **Typography feel:** clear and official, not playful
-- **Card/button style:** rounded corners (12 px), soft shadow, solid primary button
-- **Mobile feel:** the sender view is a phone-sized frame (max 420 px wide) centred on the page
+- **Style:** soft mint gradient background; white cards with large radius (20–28 px) and soft shadows
+- **Controls:** near-black pills and buttons (account pill, primary buttons, replay button)
+- **Highlight:** one yellow card per screen for the headline number (sender: amount; analyst: LinuxONE latency)
+- **Typography:** DM Sans, big bold numbers
+- **Lists:** rounded white rows with a round avatar (recipients, transfer history, feed rows)
 
 ## What We Do Not Copy
 
@@ -24,7 +23,7 @@ Both views will be **recorded for a 3-minute video at 1920×1080**, so readabili
 
 ## Visual Mood
 
-Calm, trustworthy, clear, protective.
+Calm, modern, trustworthy, protective.
 
 ## Layout Rules
 
@@ -48,31 +47,33 @@ Calm, trustworthy, clear, protective.
 
 | Token | Use | Value |
 |---|---|---|
-| `--bg` | page background | `#F5F7FA` |
-| `--surface` | cards | `#FFFFFF` |
-| `--text` | body text | `#1A2230` |
-| `--muted` | secondary text | `#5B6675` |
-| `--accent` | primary buttons, links | `#0F6E78` (teal) |
-| `--allow` | Allow chip | `#1E7B45` |
-| `--pause` | Pause chip / warning header | `#B25E00` |
-| `--hold` | Hold chip | `#B3261E` |
+| `--bg-1` → `--bg-2` | page background gradient | `#DCEFE4` → `#EEF6EA` |
+| `--surface` / `--surface-2` | cards / inner fills | `#FFFFFF` / `#F4F7F5` |
+| `--text` / `--ink` | text / black pills and buttons | `#121417` |
+| `--muted` | secondary text | `#7C838C` |
+| `--highlight` | the one yellow card | `#F2EF7C` |
+| `--accent` | focus rings | `#1E8C6E` |
+| `--allow` | Allow chip | `#1F9D55` |
+| `--pause` | Pause chip / warning icon | `#B86E00` |
+| `--hold` | Hold chip, money out | `#B42318` |
 
 - Text contrast at least 4.5:1 on its background
 - **Never use colour alone:** every chip also has a text label (ALLOW / PAUSE / HOLD) and an icon character (✓ / ! / ⏸)
 
 ## Typography Feel
 
-- System font stack: `system-ui, -apple-system, "Segoe UI", Roboto, sans-serif` (no external fonts; works offline on the server)
-- Body 16 px minimum; feed table 15 px; stats numbers 28 px bold; modal heading 22 px
+- **DM Sans** from Google Fonts, falling back to `system-ui, -apple-system, "Segoe UI", Roboto, sans-serif` (pages still work if the font can't load)
+- Body 16 px; amount 48 px bold; stat values 30 px (yellow tile 38 px); headings semibold with slight negative letter-spacing
 - Numbers use `font-variant-numeric: tabular-nums` so the live feed doesn't jitter
 
 ## Component Style
 
-- **Buttons:** primary solid `--accent`, white text, 44 px tall; secondary is a text button; destructive (Reject) outlined `--hold`
-- **Cards:** white, 12 px radius, `0 1px 3px rgba(0,0,0,.08)` shadow
-- **Inputs:** 44 px tall, 1 px `#C9D1DB` border, visible label above, focus ring 2 px `--accent`
-- **Status chips:** pill shape, tinted background (10% of chip colour), bold uppercase label + icon
-- **Score:** shown as a number 0.00–1.00 plus a thin horizontal bar
+- **Buttons:** primary near-black, white text, 48–56 px tall, 14–18 px radius (pill on the analyst bar); secondary is underlined text; Block is white with red text
+- **Cards:** white, 20 px radius (28 px for panels and the yellow card), soft shadow `0 8px 24px rgba(28,58,46,.08)`
+- **Recipient rows:** radio inputs styled as white rounded rows with avatar initial; selected row gets a black border and black check
+- **Pills:** black for the demo account and "Running live on IBM LinuxONE"; white for the mock-bank badge and latency
+- **Status chips:** pill shape, tinted background, bold uppercase label + icon
+- **Score:** number plus thin black bar
 
 ## Mobile Rules
 

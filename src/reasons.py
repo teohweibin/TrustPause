@@ -19,6 +19,12 @@ def _hours(minutes):
     return f"was first seen {minutes / 1440:.0f} days ago"
 
 
+def _pass_through(v, window):
+    if v >= 10:
+        return f"the receiving account sent out far more than it received in the last {window}"
+    return f"the receiving account sent on {v:.0%} of what it received in the last {window}"
+
+
 def _n(value, word, plural=None):
     """'no transfers', '1 transfer', '3 transfers'."""
     n = int(round(value))
@@ -55,15 +61,18 @@ REASONS = {
     "dst_out_count_24h": ("RECEIVER_OUTFLOW",
                           lambda v: f"the receiving account sent {_n(v, 'transfer')} in the last 24 hours"),
     "dst_unique_receivers_24h": ("RECEIVER_FAN_OUT",
-                                 lambda v: f"the receiving account paid {_n(v, 'different account')} in the last 24 hours"),
+                                 lambda v: f"the receiving account paid {_n(v, 'different account')} in the last 24 hours"
+                                 if v >= 1 else "the receiving account has not paid anyone in the last 24 hours"),
     "dst_pass_through_1h": ("PASS_THROUGH",
-                            lambda v: f"the receiving account sent on {min(v, 10):.0%} of what it received in the last hour"),
+                            lambda v: _pass_through(v, "hour")),
     "dst_pass_through_24h": ("PASS_THROUGH",
-                             lambda v: f"the receiving account sent on {min(v, 10):.0%} of what it received in the last 24 hours"),
+                             lambda v: _pass_through(v, "24 hours")),
     "src_unique_receivers_24h": ("SENDER_FAN_OUT",
-                                 lambda v: f"the sending account paid {_n(v, 'different account')} in the last 24 hours"),
+                                 lambda v: f"the sending account paid {_n(v, 'different account')} in the last 24 hours"
+                                 if v >= 1 else "the sending account has not paid anyone else in the last 24 hours"),
     "src_out_count_24h": ("SENDER_VOLUME",
-                          lambda v: f"the sending account made {_n(v, 'payment')} in the last 24 hours"),
+                          lambda v: f"the sending account made {_n(v, 'payment')} in the last 24 hours"
+                          if v >= 1 else "the sending account made no other payments in the last 24 hours"),
     "log_amount": ("AMOUNT",
                    lambda v: f"the amount ({math.expm1(v):,.0f}) fits a risky pattern"),
     "amount_vs_dst_mean": ("AMOUNT_UNUSUAL",

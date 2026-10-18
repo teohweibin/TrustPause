@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS cases (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     txn_id INTEGER REFERENCES transactions(id),
     status TEXT,
-    warning_en TEXT, warning_bm TEXT, analyst_note TEXT, text_source TEXT,
+    warning_en TEXT, warning_bm TEXT, analyst_note TEXT, note_source TEXT,
     sender_reasons_json TEXT,
     sender_choice TEXT, analyst_decision TEXT, decided_at TEXT
 );
@@ -62,7 +62,7 @@ class Store:
             case_id = None
             if result["decision"] in ("pause", "hold"):
                 cur = self.conn.execute(
-                    "INSERT INTO cases (txn_id, status, warning_en, warning_bm, analyst_note, text_source,"
+                    "INSERT INTO cases (txn_id, status, warning_en, warning_bm, analyst_note, note_source,"
                     " sender_reasons_json) VALUES (?,?,?,?,?,?,?)",
                     (txn_id, "paused" if result["decision"] == "pause" else "held",
                      result["warning_en"], result["warning_bm"], result["analyst_note"], "template",
@@ -72,12 +72,10 @@ class Store:
             self.conn.commit()
         return txn_id, case_id
 
-    def update_texts(self, case_id, texts, source):
+    def update_note(self, case_id, note, source):
+        """Replace the analyst note (sender warnings always stay the reviewed templates)."""
         with self.lock:
-            self.conn.execute(
-                "UPDATE cases SET warning_en=?, warning_bm=?, analyst_note=?, text_source=? WHERE id=?",
-                (texts["warning_en"], texts["warning_bm"], texts["analyst_note"], source, case_id),
-            )
+            self.conn.execute("UPDATE cases SET analyst_note=?, note_source=? WHERE id=?", (note, source, case_id))
             self.conn.commit()
 
     def set_sender_choice(self, case_id, choice):
@@ -105,7 +103,7 @@ class Store:
 
     def queue(self, limit=50):
         rows = self._rows(
-            "SELECT c.id AS case_id, c.status, c.text_source, t.id AS txn_id, t.ts, t.amount, t.currency,"
+            "SELECT c.id AS case_id, c.status, c.note_source, t.id AS txn_id, t.ts, t.amount, t.currency,"
             " t.score, t.reasons_json FROM cases c JOIN transactions t ON t.id = c.txn_id"
             " WHERE c.status = 'held' ORDER BY c.id DESC LIMIT ?", (limit,))
         for r in rows:
