@@ -58,4 +58,4 @@ If the full run is too slow or runs out of memory, build features on a sample of
 
 ## Status
 
-In progress: code written, not yet run on LinuxONE
+Done: verified on LinuxONE (see build-status.md)

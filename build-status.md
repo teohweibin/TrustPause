@@ -7,13 +7,13 @@
 - Theme: Theme 1, Real-Time AI for Critical Decisions
 - Build shape: Full-stack AI prototype on IBM LinuxONE (FastAPI + XGBoost + PyTorch/NNPA + Granite + 2 HTML views, Docker)
 - Current stage: Building
-- Current work card: `work-cards/02-feature-pipeline.md`; finish open items in `work-cards/00-setup-gate.md` alongside
+- Current work card: `work-cards/03-xgboost-model.md` (P1); in parallel 04 NNPA probe, 05, 06 stub, 07 mock, 09; finish open items in `work-cards/00-setup-gate.md` alongside
 
 ## Completed work cards
 
 - [ ] 00 LinuxONE setup gate (mostly done)
 - [x] 01 Repo, data and environment
-- [ ] 02 Feature pipeline
+- [x] 02 Feature pipeline
 - [ ] 03 XGBoost model + reasons
 - [ ] 04 Sequence model on Telum NNPA
 - [ ] 05 Granite explainer
@@ -25,7 +25,6 @@
 ## In progress
 
 - 00 Setup gate: remaining items (Discord lab confirmation, `.pem` sharing, roles)
-- 02 Feature pipeline: `src/features.py` and `notebooks/02_features.ipynb` written; not yet run on LinuxONE
 
 ## Blockers
 
@@ -34,7 +33,7 @@
 ## Decisions made
 
 - Theme: Theme 1 (Real-Time AI for Critical Decisions)
-- Stack: Python, pandas, networkx, XGBoost, PyTorch + torch_nnpa, llama.cpp + Granite, FastAPI, SQLite, plain HTML/CSS/JS, Docker
+- Stack: Python, pandas, XGBoost, PyTorch + torch_nnpa, llama.cpp + Granite, FastAPI, SQLite, plain HTML/CSS/JS, Docker
 - Dataset: IBM AML synthetic (`HI-Small_Trans.csv`), licence to verify
 - Split: time-based by calendar day after dropping sparse days (< 1% of busiest day). HI-Small: drop Sep 11–18 (only ~1,100 rows, ~60% laundering); train Sep 1–6, val Sep 7–8, test Sep 9–10
 - Features: online `AccountState` (24 features, see `FEATURE_NAMES`). Flagged-account proximity via rolling counterparty sets instead of networkx. Labels act as reports: flag both accounts 24 h later, training-period labels only
@@ -81,7 +80,27 @@
 - Amounts are in 15+ currencies (incl. Bitcoin); features must handle currency.
 - Some rows are self-transfers (`src == dst`, e.g. Reinvestment).
 
+## Work Card 02 Verification
+
+- Build: `nohup python -m src.features > data/features_build.log 2>&1 &` → `data/features_all.pkl`
+- 5,077,237 rows in 131 s on LinuxONE (**25.8 µs per transaction**, single core); 515,078 accounts; 3,471 flagged accounts (training labels only)
+- Unit check passed; `No look-ahead: True` (first 100,000 rows identical when rebuilt alone)
+- Split unchanged: train 3,248,921 / val 965,524 / test 862,792
+
+### Findings for Work Card 03 / pitch
+
+- Strongest signals (laundering ÷ normal mean, training period): `dst_flagged` 51×, `dst_flagged_receivers_24h` 13×, `src_flagged` 4.5×, `dst_flagged_senders_24h` 4.3×, sender fan-out (`src_unique_receivers_24h`, `src_out_count_24h`) 1.9×.
+- Laundering goes to **new counterparties** (`sender_known_to_dst_24h` 0.32×) and to receivers that have **barely sent anything yet** (`dst_out_count_*` ~0.2×).
+- Fan-in band 5–10 senders: 0.81% laundering vs 0.06% baseline (~13×); lower again above 10 senders (likely businesses).
+- **Pass-through does not separate laundering in this dataset** (0.8–0.95×). Do not claim it in the pitch unless the model shows it matters.
+- Test period only sees flags from before Sep 6, so expect test scores below validation; report both.
+- `amount_vs_dst_mean` has extreme values: fine for XGBoost, log-scale it for the GRU (card 04).
+- `payment_format` and `receiving_currency` are category codes (first-appearance order): treat as categorical in card 03. Card 06 must warm up `AccountState` on the same data in the same order (or save `state.codes`) so codes match at serving time.
+- `cross_currency` and `is_self_transfer` are ~0 for laundering.
+
 ## Measured results (fill in as you go)
+
+- Feature computation per transaction (LinuxONE, single core): 25.8 µs
 
 - XGBoost test PR-AUC:
 - Ensemble test PR-AUC:
