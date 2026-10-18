@@ -115,6 +115,12 @@ On this dataset the sequence model did not improve accuracy (test PR-AUC 0.005 v
 
 All names, balances and accounts in the demo are fictional.
 
+| The scam message | The warning (live on LinuxONE) | After cancelling |
+|---|---|---|
+| ![Scam message](screenshots/demo_sender_scam_message.png) | ![Warning](screenshots/demo_sender_warning.png) | ![Cancelled](screenshots/demo_sender_cancelled.png) |
+
+![Analyst console during replay on LinuxONE: 0.25 ms p50 latency at 500 transfers per second](screenshots/demo_analyst_console.png)
+
 ## Repository
 
 ```
