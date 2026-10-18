@@ -4,85 +4,131 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TrustPause Demo Bank</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap">
 <link rel="stylesheet" href="/web/style.css">
 <style>
   body { display: flex; justify-content: center; padding: 24px 16px 48px; }
   .phone { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 16px; }
-  .bank-header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-  .mock { font-size: 12px; font-weight: 700; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px; }
-  form { display: flex; flex-direction: column; gap: 16px; }
-  .amount-row { display: flex; gap: 8px; align-items: center; }
-  .amount-row span { flex: 0 0 auto; font-weight: 600; color: var(--muted); }
-  #send { width: 100%; }
-  .result { border-left: 6px solid var(--allow); }
-  .result.cancelled, .result.hold { border-left-color: var(--info); }
-  .result.continued { border-left-color: var(--pause); }
-  .result h2 { margin-bottom: 6px; }
-  .footer { text-align: center; }
+  .topbar { display: flex; align-items: center; gap: 12px; }
+  .topbar .hello { flex: 1; font-weight: 600; }
+  .topbar .avatar { background: var(--ink); color: #fff; }
 
-  .overlay { position: fixed; inset: 0; background: rgba(26, 34, 48, .55); display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .amount-card { border-radius: var(--radius-lg); padding: 22px 22px 24px; text-align: center; box-shadow: var(--shadow); }
+  .amount-card .label { font-weight: 600; }
+  .amount-input { display: flex; justify-content: center; align-items: baseline; gap: 4px; margin: 6px 0 2px; }
+  .amount-input span { font-size: 40px; font-weight: 700; }
+  .amount-input input {
+    width: 4ch; min-width: 2ch; max-width: 9ch; height: auto; padding: 0; border: 0; background: transparent; text-align: left;
+    font-size: 48px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums;
+  }
+  .amount-input input:focus-visible { outline: none; border-bottom: 2px solid var(--ink); }
+  .amount-card .sub { font-size: 13px; color: #4E5A45; }
+
+  .section-title { display: flex; justify-content: space-between; align-items: baseline; margin: 4px 4px -4px; }
+  .recipients { display: flex; flex-direction: column; gap: 10px; border: 0; padding: 0; margin: 0; }
+  .recipient { display: block; margin: 0; font-weight: 400; cursor: pointer; }
+  .recipient input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .recipient > span {
+    display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+    background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); border: 2px solid transparent;
+  }
+  .recipient .who { flex: 1; display: flex; flex-direction: column; }
+  .recipient .who strong { font-weight: 600; }
+  .recipient .who small { color: var(--muted); font-size: 13px; }
+  .recipient .tick { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border); display: grid; place-items: center; font-size: 12px; color: transparent; }
+  .recipient input:checked + span { border-color: var(--ink); }
+  .recipient input:checked + span .tick { background: var(--ink); border-color: var(--ink); color: #fff; }
+
+  #send { width: 100%; min-height: 56px; border-radius: 18px; font-size: 17px; }
+
+  .result { display: flex; gap: 14px; align-items: flex-start; }
+  .result .avatar { color: #fff; }
+  .result.allow .avatar { background: var(--allow); }
+  .result.hold .avatar, .result.cancelled .avatar { background: var(--info); }
+  .result.continued .avatar { background: var(--pause); }
+  .result h2 { margin-bottom: 4px; }
+  .result p { margin: 0; }
+
+  .history { display: flex; flex-direction: column; gap: 10px; }
+  .history-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+  .history-row .who { flex: 1; display: flex; flex-direction: column; }
+  .history-row .who small { color: var(--muted); font-size: 13px; }
+  .history-row .amt { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .amt.sent { color: var(--hold); }
+  .amt.cancelled { color: var(--muted); text-decoration: line-through; }
+  .amt.held { color: var(--pause); }
+
+  .footer { align-self: center; }
+
+  .overlay { position: fixed; inset: 0; background: rgba(18, 20, 23, .45); display: flex; align-items: flex-end; justify-content: center; padding: 16px; }
   .overlay[hidden] { display: none; }
-  .modal { width: 100%; max-width: 420px; background: var(--surface); border-radius: var(--radius); overflow: hidden; box-shadow: 0 10px 30px rgba(0, 0, 0, .25); }
-  .modal-head { background: var(--pause); color: #fff; padding: 16px 24px; }
-  .modal-head h2 { font-size: 22px; }
-  .modal-body { padding: 20px 24px 24px; display: flex; flex-direction: column; gap: 14px; }
-  .lang { display: flex; gap: 4px; align-self: flex-end; }
-  .lang button { min-height: 32px; padding: 0 10px; font-size: 13px; background: var(--surface); border-color: var(--border); color: var(--muted); }
-  .lang button[aria-pressed="true"] { background: var(--text); color: #fff; border-color: var(--text); }
-  .reasons { margin: 0; padding-left: 20px; color: var(--muted); font-size: 15px; }
+  .modal { width: 100%; max-width: 420px; background: var(--surface); border-radius: var(--radius-lg); box-shadow: 0 20px 50px rgba(0, 0, 0, .25); padding: 24px; display: flex; flex-direction: column; gap: 14px; margin-bottom: 8vh; }
+  .modal-head { display: flex; align-items: center; gap: 12px; }
+  .modal-head .avatar { background: #FCF1DE; color: var(--pause); font-size: 22px; }
+  .modal-head h2 { font-size: 21px; flex: 1; }
+  .lang { display: inline-flex; padding: 3px; background: var(--surface-2); border-radius: 999px; align-self: flex-start; }
+  .lang button { min-height: 30px; padding: 0 14px; border-radius: 999px; font-size: 13px; background: transparent; color: var(--muted); }
+  .lang button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+  .reasons { margin: 0; padding: 12px 14px 12px 32px; background: var(--surface-2); border-radius: var(--radius-sm); font-size: 15px; }
   .reasons li { margin-bottom: 4px; }
-  .modal-actions { display: flex; flex-direction: column; gap: 4px; }
-  #cancel-transfer { width: 100%; }
+  .modal-actions { display: flex; flex-direction: column; gap: 6px; }
+  #cancel-transfer { width: 100%; min-height: 54px; border-radius: 18px; }
 </style>
 </head>
 <body>
 <main class="phone">
-  <div class="bank-header">
-    <h1>TrustPause Demo Bank</h1>
-    <span class="mock">MOCK · DEMO ONLY</span>
+  <div class="topbar">
+    <span class="avatar" aria-hidden="true">D</span>
+    <span class="hello">Hi, demo user</span>
+    <span class="pill pill-light">MOCK BANK · DEMO</span>
   </div>
-  <p class="muted small" style="margin:0">A pretend banking app. Every transfer is scored live on IBM LinuxONE before the money leaves.</p>
+  <span class="pill" style="align-self:flex-start">Demo account •••• 0001 · USD</span>
 
   <div id="status" class="banner" role="status">Connecting to the scoring service…</div>
 
-  <form id="transfer" class="card" novalidate>
-    <h2>Send money</h2>
-    <div>
-      <label for="recipient">Recipient</label>
-      <select id="recipient" required disabled><option>Loading…</option></select>
+  <form id="transfer" novalidate style="display:flex;flex-direction:column;gap:16px">
+    <div class="amount-card highlight">
+      <label for="amount" class="label">Send money</label>
+      <div class="amount-input"><span aria-hidden="true">$</span><input id="amount" type="number" inputmode="decimal" min="1" step="0.01" value="500" required aria-describedby="amount-sub"></div>
+      <div id="amount-sub" class="sub">Every transfer is checked on IBM LinuxONE before it leaves</div>
     </div>
-    <div>
-      <label for="amount">Amount</label>
-      <div class="amount-row">
-        <span id="currency">USD</span>
-        <input id="amount" type="number" inputmode="decimal" min="1" step="0.01" value="500" required>
-      </div>
-    </div>
+
+    <div class="section-title"><h2 id="recipients-title">Send to</h2><span class="small muted">USD (demo)</span></div>
+    <fieldset class="recipients" id="recipients" aria-labelledby="recipients-title">
+      <div class="empty">Loading recipients…</div>
+    </fieldset>
+
     <button id="send" class="btn-primary" type="submit" disabled>Send</button>
   </form>
 
   <section id="result" class="card result" hidden aria-live="polite"></section>
 
-  <p id="latency" class="footer muted small num"></p>
+  <div class="section-title" id="history-title" hidden><h2>Your transfers</h2><span class="small muted">this session</span></div>
+  <div id="history" class="history"></div>
+
+  <span id="latency" class="pill pill-light footer num" hidden></span>
 </main>
 
 <div id="overlay" class="overlay" hidden>
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="warning-text">
-    <div class="modal-head"><h2 id="modal-title">! Wait — check this recipient</h2></div>
-    <div class="modal-body">
-      <div class="lang" role="group" aria-label="Language">
-        <button type="button" data-lang="en" aria-pressed="true">EN</button>
-        <button type="button" data-lang="bm" aria-pressed="false">BM</button>
-      </div>
-      <p id="warning-text" style="margin:0"></p>
-      <div id="reasons-block">
-        <h3 class="small muted" style="margin-bottom:6px">Why we paused this</h3>
-        <ul id="reasons" class="reasons"></ul>
-      </div>
-      <div class="modal-actions">
-        <button id="cancel-transfer" class="btn-primary" type="button">Cancel transfer</button>
-        <button id="continue-transfer" class="btn-text" type="button">I understand the risk, continue</button>
-      </div>
+    <div class="modal-head">
+      <span class="avatar" aria-hidden="true">!</span>
+      <h2 id="modal-title">Wait, check this recipient</h2>
+    </div>
+    <div class="lang" role="group" aria-label="Language">
+      <button type="button" data-lang="en" aria-pressed="true">EN</button>
+      <button type="button" data-lang="bm" aria-pressed="false">BM</button>
+    </div>
+    <p id="warning-text" style="margin:0"></p>
+    <div id="reasons-block">
+      <h3 class="small muted" style="margin-bottom:8px">Why we paused this</h3>
+      <ul id="reasons" class="reasons"></ul>
+    </div>
+    <div class="modal-actions">
+      <button id="cancel-transfer" class="btn-primary" type="button">Cancel transfer</button>
+      <button id="continue-transfer" class="btn-text" type="button">I understand the risk, continue</button>
     </div>
   </div>
 </div>
@@ -91,8 +137,20 @@
 const $ = (id) => document.getElementById(id);
 const CURRENCY = { "US Dollar": "USD" };
 let lang = "en";
-let current = null;      // last /api/transfer response
+let current = null;      // last /api/transfer response, plus display fields
 let lastFocus = null;
+let accounts = [];
+
+function el(tag, props = {}, children = []) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "text") node.textContent = v;
+    else if (k === "class") node.className = v;
+    else node.setAttribute(k, v);
+  }
+  for (const c of [].concat(children)) if (c) node.append(c);
+  return node;
+}
 
 async function api(path, options = {}) {
   const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...options });
@@ -101,18 +159,18 @@ async function api(path, options = {}) {
 }
 
 function showStatus(text, isError = false) {
-  const el = $("status");
-  el.hidden = !text;
-  el.textContent = text || "";
-  el.classList.toggle("error", isError);
+  const s = $("status");
+  s.hidden = !text;
+  s.textContent = text || "";
+  s.classList.toggle("error", isError);
 }
 
 async function waitUntilReady() {
   for (;;) {
     try {
       const s = await api("/api/status");
-      if (s.stage === "ready") return;
-      if (s.stage === "failed") { showStatus(`Scoring service failed to start: ${s.error}`, true); return; }
+      if (s.stage === "ready") return true;
+      if (s.stage === "failed") { showStatus(`Scoring service failed to start: ${s.error}`, true); return false; }
       showStatus(`Scoring service is starting: ${s.stage}…`);
     } catch (e) {
       showStatus("Cannot reach the scoring service. Is the API running and the SSH tunnel open?", true);
@@ -121,43 +179,60 @@ async function waitUntilReady() {
   }
 }
 
+function split(label) {          // "Recipient A — Online seller" -> ["Online seller", "Recipient A"]
+  const [code, name] = label.split(" — ");
+  return name ? [name, code] : [label, ""];
+}
+
 async function loadRecipients() {
-  const accounts = await api("/api/demo-accounts");
-  const select = $("recipient");
-  select.replaceChildren();
-  for (const a of accounts) {
-    const opt = document.createElement("option");
-    opt.value = a.id;
-    opt.textContent = a.label;
-    opt.dataset.currency = CURRENCY[a.currency] || a.currency;
-    select.append(opt);
-  }
-  select.disabled = false;
+  accounts = await api("/api/demo-accounts");
+  const box = $("recipients");
+  box.replaceChildren(...accounts.map((a, i) => {
+    const [name, code] = split(a.label);
+    const input = el("input", { type: "radio", name: "recipient", value: a.id });
+    if (i === 0) input.checked = true;
+    return el("label", { class: "recipient" }, [input, el("span", {}, [
+      el("span", { class: "avatar", text: code.slice(-1) || name[0], "aria-hidden": "true" }),
+      el("span", { class: "who" }, [el("strong", { text: name }), el("small", { text: code })]),
+      el("span", { class: "tick", text: "✓", "aria-hidden": "true" }),
+    ])]);
+  }));
   $("send").disabled = false;
-  updateCurrency();
+  updateSendLabel();
   showStatus("");
 }
 
-function updateCurrency() {
-  const opt = $("recipient").selectedOptions[0];
-  $("currency").textContent = opt ? `${opt.dataset.currency} (demo)` : "";
+function selected() {
+  const id = document.querySelector("input[name=recipient]:checked")?.value;
+  return accounts.find((a) => a.id === id);
 }
 
-function money(amount) {
-  return `${$("currency").textContent.replace(" (demo)", "")} ${Number(amount).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+const money = (amount) => `$${Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+function updateSendLabel() {
+  const amount = parseFloat($("amount").value);
+  $("amount").style.width = `${Math.max($("amount").value.length, 1) + 0.6}ch`;  // keep "$500" centred
+  const who = selected();
+  $("send").textContent = amount > 0 && who ? `Send ${money(amount)} to ${split(who.label)[0]}` : "Send";
 }
 
-function showResult(kind, title, body) {
-  const el = $("result");
-  el.className = `card result ${kind}`;
-  el.replaceChildren();
-  const h = document.createElement("h2");
-  h.textContent = title;
-  const p = document.createElement("p");
-  p.style.margin = "0";
-  p.textContent = body;
-  el.append(h, p);
-  el.hidden = false;
+function showResult(kind, icon, title, body) {
+  const box = $("result");
+  box.className = `card result ${kind}`;
+  box.replaceChildren(el("span", { class: "avatar", text: icon, "aria-hidden": "true" }),
+    el("div", {}, [el("h2", { text: title }), el("p", { text: body })]));
+  box.hidden = false;
+}
+
+function addHistory(kind, status) {
+  const [name] = split(current.recipient.label);
+  const sign = kind === "sent" ? "−" : "";
+  $("history-title").hidden = false;
+  $("history").prepend(el("div", { class: "card history-row" }, [
+    el("span", { class: "avatar", text: name[0], "aria-hidden": "true" }),
+    el("span", { class: "who" }, [el("strong", { text: name }), el("small", { text: status })]),
+    el("span", { class: `amt ${kind}`, text: `${sign}${money(current.amount)}` }),
+  ]));
 }
 
 function renderWarning() {
@@ -165,13 +240,8 @@ function renderWarning() {
   $("warning-text").textContent = lang === "en" ? current.warning_en : current.warning_bm;
   $("reasons-block").hidden = lang !== "en";  // the Malay warning already includes the reasons
   for (const b of document.querySelectorAll(".lang button")) b.setAttribute("aria-pressed", String(b.dataset.lang === lang));
-  const list = $("reasons");
-  list.replaceChildren();
-  for (const r of current.sender_reasons) {
-    const li = document.createElement("li");
-    li.textContent = r.sentence.charAt(0).toUpperCase() + r.sentence.slice(1);
-    list.append(li);
-  }
+  $("reasons").replaceChildren(...current.sender_reasons.map((r) =>
+    el("li", { text: r.sentence.charAt(0).toUpperCase() + r.sentence.slice(1) })));
 }
 
 function openModal() {
@@ -189,50 +259,56 @@ function closeModal() {
 
 async function choose(choice) {
   closeModal();
-  const amount = current.amount_display;
   try {
     await api(`/api/transfer/${current.case_id}/choice`, { method: "POST", body: JSON.stringify({ choice }) });
   } catch (e) { /* the choice is only logged; the message below still applies */ }
   if (choice === "cancel") {
-    showResult("cancelled", "Transfer cancelled", `No money was sent. ${amount} stays in your account.`);
+    showResult("cancelled", "✓", "Transfer cancelled", `No money was sent. ${money(current.amount)} stays in your account.`);
+    addHistory("cancelled", "Cancelled after warning");
   } else {
-    showResult("continued", "Transfer sent after warning", `${amount} was sent. Your choice to continue has been recorded.`);
+    showResult("continued", "!", "Transfer sent after warning", `${money(current.amount)} was sent. Your choice to continue has been recorded.`);
+    addHistory("sent", "Sent after warning");
   }
 }
 
-$("recipient").addEventListener("change", updateCurrency);
+$("amount").addEventListener("input", updateSendLabel);
+$("recipients").addEventListener("change", updateSendLabel);
 
 $("transfer").addEventListener("submit", async (event) => {
   event.preventDefault();
   const amount = parseFloat($("amount").value);
+  const recipient = selected();
   if (!(amount > 0)) { $("amount").focus(); showStatus("Enter an amount greater than zero.", true); return; }
+  if (!recipient) { showStatus("Choose who to send to.", true); return; }
   showStatus("");
   $("send").disabled = true;
   $("result").hidden = true;
   try {
-    current = await api("/api/transfer", { method: "POST", body: JSON.stringify({ dst: $("recipient").value, amount }) });
-    current.amount_display = money(amount);
-    $("latency").textContent = `Scored on IBM LinuxONE in ${current.latency_ms.toFixed(1)} ms`;
+    current = await api("/api/transfer", { method: "POST", body: JSON.stringify({ dst: recipient.id, amount }) });
+    current.amount = amount;
+    current.recipient = recipient;
+    $("latency").hidden = false;
+    $("latency").textContent = `Checked on IBM LinuxONE in ${current.latency_ms.toFixed(1)} ms`;
+    const [name] = split(recipient.label);
     if (current.decision === "allow") {
-      showResult("allow", "✓ Transfer sent", `${current.amount_display} is on its way to ${$("recipient").selectedOptions[0].textContent.split(" — ")[0]}.`);
+      showResult("allow", "✓", "Transfer sent", `${money(amount)} is on its way to ${name}.`);
+      addHistory("sent", "Sent");
     } else if (current.decision === "pause") {
       openModal();
     } else {
-      showResult("hold", "⏸ Transfer on hold for your protection", current.warning_en);
-      const toggle = document.createElement("button");
-      toggle.type = "button";
-      toggle.className = "btn-text";
-      toggle.textContent = "Baca dalam Bahasa Malaysia";
+      showResult("hold", "⏸", "On hold for your protection", current.warning_en);
+      addHistory("held", "Held for review");
+      const toggle = el("button", { class: "btn-text", type: "button", text: "Baca dalam Bahasa Malaysia" });
       let inBm = false;
       toggle.addEventListener("click", () => {
         inBm = !inBm;
         $("result").querySelector("p").textContent = inBm ? current.warning_bm : current.warning_en;
         toggle.textContent = inBm ? "Read in English" : "Baca dalam Bahasa Malaysia";
       });
-      $("result").append(toggle);
+      $("result").querySelector("div").append(toggle);
     }
   } catch (e) {
-    showStatus(`Transfer could not be scored: ${e.message}`, true);
+    showStatus(`Transfer could not be checked: ${e.message}`, true);
   } finally {
     $("send").disabled = false;
   }
@@ -256,7 +332,10 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
-(async () => { await waitUntilReady(); try { await loadRecipients(); } catch (e) { showStatus(`Could not load recipients: ${e.message}`, true); } })();
+(async () => {
+  if (!(await waitUntilReady())) return;
+  try { await loadRecipients(); } catch (e) { showStatus(`Could not load recipients: ${e.message}`, true); }
+})();
 </script>
 </body>
 </html>

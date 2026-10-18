@@ -5,46 +5,57 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TrustPause Analyst Console</title>
 <link rel="stylesheet" href="/web/style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap">
 <style>
-  body { padding: 16px 24px 32px; }
-  header.top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; margin-bottom: 16px; }
-  header.top .title { display: flex; flex-direction: column; }
-  .platform { font-size: 13px; font-weight: 700; color: var(--accent); }
-  .controls { display: flex; gap: 8px; align-items: center; margin-left: auto; }
-  .controls select { width: auto; }
-  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px; }
-  .stat { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px 16px; }
-  .stat .label { font-size: 13px; color: var(--muted); }
-  .stat .value { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.2; }
+  body { padding: 20px 28px 32px; }
+  header.top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-bottom: 18px; }
+  header.top .title { display: flex; align-items: center; gap: 14px; }
+  header.top .avatar { background: var(--ink); color: #fff; }
+  .controls { display: flex; gap: 10px; align-items: center; margin-left: auto; }
+  .controls select { width: auto; height: 44px; border-radius: 999px; background: var(--surface); box-shadow: var(--shadow); border: 0; padding: 0 16px; font-weight: 600; }
+  #replay { border-radius: 999px; min-height: 44px; }
+  .stats { display: grid; grid-template-columns: 1.4fr repeat(6, 1fr); gap: 14px; margin-bottom: 18px; }
+  .stat { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px 18px; }
+  .stat.highlight { background: var(--highlight); }
+  .stat .label { font-size: 13px; color: var(--muted); font-weight: 500; }
+  .stat.highlight .label, .stat.highlight .sub { color: #4E5A45; }
+  .stat .value { font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.2; letter-spacing: -.02em; }
+  .stat.highlight .value { font-size: 38px; }
   .stat .sub { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .panels { display: grid; grid-template-columns: 40fr 25fr 35fr; gap: 16px; align-items: start; }
-  .panel { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; min-height: 420px; }
-  .panel > h2 { margin-bottom: 12px; display: flex; justify-content: space-between; align-items: baseline; }
-  table { width: 100%; border-collapse: collapse; font-size: 15px; font-variant-numeric: tabular-nums; }
-  th { text-align: left; font-size: 13px; color: var(--muted); font-weight: 600; padding: 4px 6px; border-bottom: 1px solid #E3E8EE; }
-  td { padding: 6px; border-bottom: 1px solid #EEF1F4; white-space: nowrap; }
+  .panel { background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 20px; min-height: 420px; }
+  .panel > h2 { margin-bottom: 14px; display: flex; justify-content: space-between; align-items: baseline; }
+  table { width: 100%; border-collapse: separate; border-spacing: 0 4px; font-size: 15px; font-variant-numeric: tabular-nums; }
+  th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 600; padding: 2px 8px; text-transform: uppercase; letter-spacing: .04em; }
+  td { padding: 7px 8px; white-space: nowrap; background: var(--surface-2); }
+  td:first-child { border-radius: 12px 0 0 12px; }
+  td:last-child { border-radius: 0 12px 12px 0; }
   tr.clickable { cursor: pointer; }
-  tr.clickable:hover, tr.clickable:focus-visible { background: #F0F6F7; }
-  tr.selected { background: #E3F1F2; }
+  tr.clickable:hover td, tr.clickable:focus-visible td { background: #E8F1EC; }
+  tr.selected td { background: #DDEFE5; }
   .truth { color: var(--hold); font-weight: 700; }
-  .queue { display: flex; flex-direction: column; gap: 10px; max-height: 640px; overflow: auto; }
-  .qcard { flex-shrink: 0; display: block; border: 1px solid #E3E8EE; border-radius: 10px; padding: 10px 12px; text-align: left; background: var(--surface); width: 100%; font-weight: 400; min-height: 0; }
-  .qcard:hover { border-color: var(--accent); }
-  .qcard.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .queue { display: flex; flex-direction: column; gap: 10px; max-height: 640px; overflow: auto; padding: 2px; }
+  .qcard { flex-shrink: 0; display: block; border: 2px solid transparent; border-radius: 16px; padding: 12px 14px; text-align: left; background: var(--surface-2); width: 100%; font-weight: 400; min-height: 0; }
+  .qcard:hover { background: #E8F1EC; }
+  .qcard.selected { border-color: var(--ink); background: var(--surface); }
   .qcard .row { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
   .qcard .reason { font-size: 14px; color: var(--muted); margin-top: 4px; white-space: normal; }
-  .case h3 { margin: 16px 0 6px; font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-  .case dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-variant-numeric: tabular-nums; }
+  .case h3 { margin: 18px 0 8px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .case dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0; font-variant-numeric: tabular-nums; }
   .case dt { color: var(--muted); }
-  .case dd { margin: 0; }
+  .case dd { margin: 0; font-weight: 500; }
   .case ul { margin: 0; padding-left: 20px; }
-  .case li { margin-bottom: 4px; }
-  .tag { font-size: 12px; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 0 6px; margin-left: 4px; }
-  .note { white-space: pre-line; background: var(--bg); border-radius: 8px; padding: 10px 12px; margin: 0; }
-  .sender-saw { background: rgba(178, 94, 0, .06); border-radius: 8px; padding: 10px 12px; margin: 0; }
-  .actions { display: flex; gap: 8px; margin-top: 16px; }
-  .footnote { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  .case li { margin-bottom: 6px; }
+  .tag { font-size: 11px; color: var(--muted); background: var(--surface-2); border-radius: 999px; padding: 2px 8px; margin-left: 6px; font-weight: 600; text-transform: none; letter-spacing: 0; }
+  .note { white-space: pre-line; background: var(--surface-2); border-radius: 14px; padding: 12px 14px; margin: 0; }
+  .sender-saw { background: #FCF6E6; border-radius: 14px; padding: 12px 14px; margin: 0; }
+  .actions { display: flex; gap: 10px; margin-top: 18px; }
+  .actions button { flex: 1; }
+  .footnote { font-size: 13px; color: var(--muted); margin-top: 10px; }
   @media (max-width: 1279px) {
+    .stats { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
     .panels { grid-template-columns: 1fr; }
     .panel.feed { order: 3; } .panel.queue-panel { order: 1; } .panel.case { order: 2; }
   }
@@ -53,8 +64,9 @@
 <body>
 <header class="top">
   <div class="title">
+    <span class="avatar" aria-hidden="true">T</span>
     <h1>TrustPause · Analyst console</h1>
-    <span class="platform">Running live on IBM LinuxONE</span>
+    <span class="pill">Running live on IBM LinuxONE</span>
   </div>
   <div class="controls">
     <label for="speed" class="sr-only">Replay speed</label>
@@ -70,13 +82,13 @@
 <div id="status" class="banner" role="status" style="margin-bottom:16px">Connecting to the scoring service…</div>
 
 <section class="stats" aria-label="Live statistics">
+  <div class="stat highlight"><div class="label">Scoring latency on LinuxONE (p50)</div><div class="value" id="s-p50">–</div><div class="sub" id="s-p95">p95 –</div></div>
   <div class="stat"><div class="label">Transfers scored</div><div class="value" id="s-total">0</div><div class="sub" id="s-rate">0 tx/s</div></div>
-  <div class="stat"><div class="label">Scoring latency</div><div class="value" id="s-p50">–</div><div class="sub" id="s-p95">p50 · p95 –</div></div>
   <div class="stat"><div class="label">✓ Allowed</div><div class="value" id="s-allow" style="color:var(--allow)">0</div></div>
   <div class="stat"><div class="label">! Paused &amp; warned</div><div class="value" id="s-pause" style="color:var(--pause)">0</div></div>
   <div class="stat"><div class="label">⏸ Held for review</div><div class="value" id="s-hold" style="color:var(--hold)">0</div></div>
   <div class="stat"><div class="label">Laundering caught*</div><div class="value" id="s-caught">–</div><div class="sub" id="s-caught-sub">of 0 in replay</div></div>
-  <div class="stat"><div class="label">Data clock</div><div class="value small num" id="s-clock" style="font-size:18px">–</div><div class="sub" id="s-granite">Granite: –</div></div>
+  <div class="stat"><div class="label">Data clock</div><div class="value num" id="s-clock" style="font-size:18px">–</div><div class="sub" id="s-granite">Granite: –</div></div>
 </section>
 
 <div class="panels">
@@ -171,7 +183,7 @@ async function refreshMetrics() {
   $("s-total").textContent = fmt.format(total);
   $("s-rate").textContent = `${fmt.format(m.txn_per_sec)} tx/s · ${fmt.format(m.replay_position)} of ${fmt.format(m.replay_total)}`;
   $("s-p50").textContent = m.latency_ms_p50 == null ? "–" : `${m.latency_ms_p50.toFixed(2)} ms`;
-  $("s-p95").textContent = m.latency_ms_p95 == null ? "p50 · p95 –" : `p50 · p95 ${m.latency_ms_p95.toFixed(2)} ms`;
+  $("s-p95").textContent = m.latency_ms_p95 == null ? "p95 –" : `p95 ${m.latency_ms_p95.toFixed(2)} ms · features + model + reasons`;
   $("s-allow").textContent = fmt.format(m.allow);
   $("s-pause").textContent = fmt.format(m.pause);
   $("s-hold").textContent = fmt.format(m.hold);

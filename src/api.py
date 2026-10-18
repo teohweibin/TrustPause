@@ -96,7 +96,10 @@ def pick_demo_accounts(rows, scorer, clock):
     risky = risky.assign(flagged=risky["dst"].isin(scorer.state.flagged)).sort_values(
         ["flagged", "score_xgb"], ascending=False)
     per_dst = t.groupby("dst").agg(n=("label", "size"), bad=("label", "sum"), top=("score_xgb", "max"))
-    safe = per_dst[(per_dst["bad"] == 0) & (per_dst["top"] < pause) & ~per_dst.index.isin(scorer.state.flagged)]
+    clean = per_dst[(per_dst["bad"] == 0) & ~per_dst.index.isin(scorer.state.flagged)]
+    # Busy receivers that never scored high first, then the lowest-scoring of the rest.
+    safe = list(clean[clean["top"] < pause].sort_values("n", ascending=False).index[:200])
+    safe += list(clean[clean["top"] >= pause].sort_values("top").index[:50])
 
     def choose(candidates, passes, rank):
         """First 3 candidates that pass; if fewer, fill with the best-ranked of the rest."""
@@ -114,7 +117,7 @@ def pick_demo_accounts(rows, scorer, clock):
 
     high = choose(list(dict.fromkeys(risky["dst"]))[:60],
                   lambda p: min(p) >= pause, lambda p: -min(p))
-    low = choose(safe.sort_values("n", ascending=False).index[:200],
+    low = choose(safe,
                  lambda p: max(p) < pause, lambda p: max(p))
 
     accounts = [{**a, "label": label, "expected": "warn"} for label, a in zip(HIGH_LABELS, high)]
