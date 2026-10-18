@@ -27,14 +27,13 @@ Calm, modern, trustworthy, protective.
 
 ## Layout Rules
 
-**Sender view (`/sender`):**
-- Phone frame centred; header "TrustPause Demo Bank (mock)"
-- Recipient dropdown, amount input, one primary "Send" button
-- Result states:
-  - Allow → green success card "Transfer sent"
-  - Pause → modal pop-up: amber header "Wait — check this recipient", 2–3 sentence Granite warning, language toggle EN / BM, top 3 reasons as bullet points, **primary button "Cancel transfer"**, secondary text button "I understand the risk, continue"
-  - Hold → blue info card "This transfer is being reviewed for your protection"
-- Small footer: "Scored on IBM LinuxONE in 12 ms" (real measured latency)
+**Sender view (`/sender`): a fictional mobile banking app**
+- On laptops it sits in a phone frame (390 × 844, status bar with live clock) so it reads as a mobile app in the video; full screen on real phones
+- **Home:** "Hi, Mei", "MOCK BANK · DEMO" badge, yellow balance card (fictional $12,480.50), quick actions (Transfer works; Pay bills / Receive say "Not part of this demo"), recent activity with everyday fictional items; "Fictional bank … Not a real account" note
+- **Scam story:** 2.5 s after load an "HR Recruiter" message slides in asking for a $500 job registration fee; tapping it opens a $500 transfer to "Job agency" with purpose "Job deposit"
+- **Transfer flow:** Send to (recipient rows, "Demo Bank •••• 1234") → Amount (keypad, balance check) → Review (purpose chips + summary) → Security check (spinner shown ≥ 0.9 s so viewers see it; the real LinuxONE time is shown after) → Result
+- **Results:** Allow → "Transfer sent"; Pause → bottom sheet "Wait, check this recipient" with EN / BM, reasons, **997 National Scam Response Centre** hotline, **primary "Cancel transfer"**, secondary "I understand the risk, continue"; Hold → "On hold for your protection" with hotline; Cancel → "Transfer cancelled"; every result shows "Checked on IBM LinuxONE in N ms"
+- Balance and recent activity update after each transfer (sent, cancelled, held)
 
 **Analyst view (`/analyst`):**
 - Top bar: title, Start/Stop replay button, live stats (txn/sec, latency p50/p95, Allow / Pause / Hold counts, "Telum NNPA: on/off")
