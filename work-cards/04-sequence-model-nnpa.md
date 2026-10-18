@@ -49,4 +49,17 @@ If `torch_nnpa` is not working by H8, switch to CPU, keep the GRU only if it imp
 
 ## Status
 
-Not started
+Complete — verified on IBM LinuxONE.
+
+Evidence:
+
+- `src/train_seq.py` trains a GRU with sequence length 10 and hidden size 32.
+- Training used 100,000 sampled training sequences: 2,530 positive and 97,470 negative.
+- `models/seq.pt` was saved successfully.
+- The notebook ran with 4 code cells, 0 unexecuted cells, and 0 error cells.
+- GRU forward passed on `torch_nnpa.device()` (`nnpa:0`).
+- `is_available()` and `is_telum2_available()` both returned `True`.
+- CPU and NNPA outputs matched within `0.000244140625`; `outputs_close: True`.
+- CPU/NNPA latency was measured for batch sizes 1 and 64 over 1,000 runs.
+- Test PR-AUC: sequence `0.005142`, XGBoost `0.254146`; validation selected XGBoost ensemble weight `1.0`.
+- NNPA evidence was confirmed by `lscpu | grep -io nnpa`.
