@@ -81,38 +81,63 @@ REASONS = {
 }
 
 
+# Properties of the payment itself: real model signal, but they tell a person
+# little, so they are only used when there are not enough behavioural reasons.
+GENERIC = {"payment_format", "receiving_currency", "log_amount", "hour_of_day",
+           "is_self_transfer", "cross_currency"}
+# Reasons about the paying account. The sender view hides these (the sender is
+# the person being protected); the analyst view shows everything.
+SENDER_SIDE = {"src_flagged", "src_unique_receivers_24h", "src_out_count_24h"}
+
+
+def about(feature):
+    if feature in SENDER_SIDE:
+        return "sender"
+    if feature in GENERIC or feature == "amount_vs_dst_mean":
+        return "payment"
+    return "receiver"
+
+
 def reason(feature, value, contribution=None):
     code, sentence = REASONS.get(feature, ("OTHER", lambda v: feature.replace("_", " ")))
-    item = {"code": code, "feature": feature, "value": float(value), "sentence": sentence(float(value))}
+    item = {"code": code, "feature": feature, "about": about(feature),
+            "value": float(value), "sentence": sentence(float(value))}
     if contribution is not None:
         item["contribution"] = round(float(contribution), 4)
     return item
 
 
-def top_reasons(contribs, values, feature_names, k=3):
-    """Top-k features pushing the score up for one transaction.
+def top_reasons(contribs, values, feature_names, k=3, audience="analyst"):
+    """Top-k reasons pushing the score up for one transaction.
 
     contribs: one row of `pred_contribs` (last column is the bias).
     values: the matching feature values.
+    audience: "analyst" (all reasons) or "sender" (no reasons about the paying account).
+    Behavioural reasons come first, by contribution; generic payment properties
+    only fill remaining slots.
     """
     contribs = np.asarray(contribs)[: len(feature_names)]
-    order = np.argsort(-contribs)
+    candidates = [j for j in np.argsort(-contribs) if contribs[j] > 0]
+    if audience == "sender":
+        candidates = [j for j in candidates if feature_names[j] not in SENDER_SIDE]
+    candidates.sort(key=lambda j: feature_names[j] in GENERIC)  # stable: keeps contribution order
+
     out, seen = [], set()
-    for j in order:
-        if contribs[j] <= 0 or len(out) == k:
-            break
+    for j in candidates:
         item = reason(feature_names[j], values[j], contribs[j])
         if item["code"] in seen:  # e.g. both pass-through windows
             continue
         seen.add(item["code"])
         out.append(item)
+        if len(out) == k:
+            break
     return out
 
 
-def reasons_for(booster, X, feature_names, k=3):
+def reasons_for(booster, X, feature_names, k=3, audience="analyst"):
     """Top-k reasons for every row of X (2-D array or DataFrame)."""
     import xgboost as xgb
 
     values = np.asarray(X, dtype=np.float32)
     contribs = booster.predict(xgb.DMatrix(values, feature_names=list(feature_names)), pred_contribs=True)
-    return [top_reasons(c, v, feature_names, k) for c, v in zip(contribs, values)]
+    return [top_reasons(c, v, feature_names, k, audience) for c, v in zip(contribs, values)]

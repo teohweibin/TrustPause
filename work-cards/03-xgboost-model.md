@@ -51,4 +51,4 @@ If PR-AUC is very low, check features for bugs (card 02) before tuning the model
 
 ## Status
 
-In progress: code written and tested on synthetic data; not yet run on LinuxONE
+Done: trained and verified on LinuxONE (see build-status.md)

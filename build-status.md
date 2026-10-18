@@ -7,14 +7,14 @@
 - Theme: Theme 1, Real-Time AI for Critical Decisions
 - Build shape: Full-stack AI prototype on IBM LinuxONE (FastAPI + XGBoost + PyTorch/NNPA + Granite + 2 HTML views, Docker)
 - Current stage: Building
-- Current work card: `work-cards/03-xgboost-model.md` (P1); in parallel 04 NNPA probe, 05, 06 stub, 07 mock, 09; finish open items in `work-cards/00-setup-gate.md` alongside
+- Current work card: `work-cards/06-scorer-replay-api.md` next for the main path (03 done); in parallel 04 NNPA probe, 05, 06 stub, 07 mock, 09; finish open items in `work-cards/00-setup-gate.md` alongside
 
 ## Completed work cards
 
 - [ ] 00 LinuxONE setup gate (mostly done)
 - [x] 01 Repo, data and environment
 - [x] 02 Feature pipeline
-- [ ] 03 XGBoost model + reasons
+- [x] 03 XGBoost model + reasons
 - [ ] 04 Sequence model on Telum NNPA
 - [ ] 05 Granite explainer
 - [ ] 06 Real-time scorer, replay and API
@@ -25,7 +25,6 @@
 ## In progress
 
 - 00 Setup gate: remaining items (Discord lab confirmation, `.pem` sharing, roles)
-- 03 XGBoost: `src/train_xgb.py`, `src/reasons.py`, `notebooks/03_xgboost.ipynb` written and tested on synthetic data; run on LinuxONE pending
 
 ## Blockers
 
@@ -100,15 +99,23 @@
 - `payment_format` and `receiving_currency` are category codes (first-appearance order): treat as categorical in card 03. Card 06 must warm up `AccountState` on the same data in the same order (or save `state.codes`) so codes match at serving time.
 - `cross_currency` and `is_self_transfer` are ~0 for laundering.
 
+## Work Card 03 Notes
+
+- Top features by gain: `payment_format` (ACH-heavy laundering, a dataset quirk), `is_self_transfer`, `src_flagged`, `sender_known_to_dst_24h`, `src_unique_receivers_24h`, `dst_flagged_senders_24h`.
+- Test below validation as expected (flags frozen after training period); pause band drifts from 0.5% to 0.70% on test. Pitch: thresholds are re-tuned regularly.
+- Highest-scored normal transfer is held (sender linked to a reported case): good demo moment for human review.
+- Reasons: behavioural reasons first, generic payment properties only as filler; each reason has `about` (receiver / sender / payment). `audience="sender"` hides sender-side reasons for the sender view; the analyst view shows all.
+
 ## Measured results (fill in as you go)
 
 - Feature computation per transaction (LinuxONE, single core): 25.8 µs
 
-- XGBoost test PR-AUC:
+- XGBoost PR-AUC: val 0.361, **test 0.254** (base rate 0.11%, ~230× lift); ROC-AUC val 0.982, test 0.974
 - Ensemble test PR-AUC:
-- Hold band precision / recall:
-- Pause band precision / recall:
-- Scoring latency p50 / p95:
+- Hold band (top 0.05% on val): test 0.049% of transfers held, **precision 52%, recall 23%** (val 62% / 29%)
+- Pause band (top 0.5% on val): test 0.70% of transfers paused, **precision 8%, recall 52%** (val 13% / 62%)
+- XGBoost single prediction on LinuxONE: p50 0.10 ms, p95 0.30 ms (best iteration 283, trained in 74 s)
+- End-to-end scoring latency p50 / p95 (card 06):
 - GRU latency CPU vs NNPA (batch 1 / 64):
 - Granite time per output:
 
