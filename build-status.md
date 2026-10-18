@@ -19,7 +19,7 @@
 - [x] 05 Granite explainer
 - [x] 06 Real-time scorer, replay and API
 - [ ] 07 Sender and analyst views
-- [ ] 08 Docker on LinuxONE
+- [x] 08 Docker on LinuxONE
 - [ ] 09 Evidence, README, video and submission
 
 ## In progress
@@ -155,6 +155,22 @@
 - GRU latency CPU vs NNPA over 1,000 runs: CPU batch 1 p50/p95 `0.171/0.192 ms`; CPU batch 64 `1.693/1.870 ms`; NNPA batch 1 `0.082/0.093 ms`; NNPA batch 64 `0.131/0.140 ms`
 - Granite time per output: English 3.77–4.24 s; Bahasa Malaysia 5.54–6.17 s; analyst note 7.88–11.95 s; maximum 11.95 s.
 
+## Work Card 08 Verification
+
+- Status: Complete — verified on IBM LinuxONE.
+- Docker image `trustpause:latest` built successfully.
+- Image architecture: `s390x`.
+- `.dockerignore` excludes datasets, models, Granite files, keys, databases, Git metadata, and notebook caches.
+- Container `trustpause` ran successfully on isolated host port `8001`.
+- API warm-up processed 4,214,445 historical transactions in 104 seconds.
+- `/api/status` returned `stage: ready`.
+- `/sender` returned HTTP 200.
+- `/analyst` returned HTTP 200.
+- Both views opened successfully through an SSH tunnel.
+- Evidence screenshot: `screenshots/docker_s390x_evidence.png`.
+- Granite model was copied from the Jupyter container to `/home/linux1/granite/`.
+- `GRANITE_MODEL_PATH=/granite/granite-4.0-h-350m-base-be.f16.gguf` was set.
+- The Granite model was readable inside the `trustpause` container.
 ## Next instruction for AI
 
 Read `START_HERE.md`, `build-status.md`, `build-blueprint.md`, `architecture.md`, `design.md` and the current work card. Implement only the current work card. Run its verification steps, update this file, and stop for the team's check.
