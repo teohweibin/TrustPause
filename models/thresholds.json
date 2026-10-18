@@ -1,0 +1,32 @@
+{
+  "pause": 0.9283344149589539,
+  "hold": 0.9893903136253357,
+  "pause_rate_on_val": 0.005,
+  "hold_rate_on_val": 0.0005,
+  "feature_names": [
+    "log_amount",
+    "amount_vs_dst_mean",
+    "hour_of_day",
+    "is_self_transfer",
+    "payment_format",
+    "receiving_currency",
+    "cross_currency",
+    "dst_in_count_1h",
+    "dst_in_count_24h",
+    "dst_unique_senders_24h",
+    "dst_out_count_1h",
+    "dst_out_count_24h",
+    "dst_unique_receivers_24h",
+    "dst_pass_through_1h",
+    "dst_pass_through_24h",
+    "dst_minutes_since_first_seen",
+    "dst_lifetime_in_count",
+    "sender_known_to_dst_24h",
+    "src_out_count_24h",
+    "src_unique_receivers_24h",
+    "dst_flagged",
+    "src_flagged",
+    "dst_flagged_senders_24h",
+    "dst_flagged_receivers_24h"
+  ]
+}

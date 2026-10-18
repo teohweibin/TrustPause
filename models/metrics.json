@@ -1,0 +1,195 @@
+{
+  "best_iteration": 283,
+  "train_seconds": 73.9,
+  "scale_pos_weight": 1283.2,
+  "single_predict_ms_p50": 0.099,
+  "single_predict_ms_p95": 0.298,
+  "importance_gain": {
+    "payment_format": 39194.2109375,
+    "is_self_transfer": 13985.4208984375,
+    "src_flagged": 13277.9931640625,
+    "sender_known_to_dst_24h": 10791.89453125,
+    "src_unique_receivers_24h": 10027.806640625,
+    "dst_flagged_senders_24h": 5141.7666015625,
+    "src_out_count_24h": 3642.69580078125,
+    "dst_flagged": 3017.169677734375,
+    "cross_currency": 2710.32763671875,
+    "log_amount": 2192.22607421875,
+    "dst_in_count_1h": 2124.583740234375,
+    "dst_unique_senders_24h": 1677.298828125,
+    "dst_minutes_since_first_seen": 1580.239501953125,
+    "amount_vs_dst_mean": 1395.0887451171875,
+    "dst_in_count_24h": 1306.0810546875,
+    "dst_lifetime_in_count": 1302.3123779296875,
+    "hour_of_day": 1140.3768310546875,
+    "receiving_currency": 1062.0845947265625,
+    "dst_pass_through_24h": 979.5784301757812,
+    "dst_pass_through_1h": 975.7823486328125,
+    "dst_unique_receivers_24h": 741.2022094726562,
+    "dst_out_count_24h": 718.0909423828125,
+    "dst_out_count_1h": 698.251953125,
+    "dst_flagged_receivers_24h": 327.8128662109375
+  },
+  "val": {
+    "rows": 965524,
+    "laundering": 1036,
+    "pr_auc": 0.3608,
+    "roc_auc": 0.9823,
+    "base_rate_%": 0.1073,
+    "pause_band": {
+      "threshold": 0.9283344149589539,
+      "alert_rate_%": 0.5,
+      "alerts": 4828,
+      "laundering_caught": 642,
+      "precision_%": 13.3,
+      "recall_%": 61.97
+    },
+    "hold_band": {
+      "threshold": 0.9893903136253357,
+      "alert_rate_%": 0.05,
+      "alerts": 483,
+      "laundering_caught": 299,
+      "precision_%": 61.9,
+      "recall_%": 28.86
+    },
+    "by_alert_rate": [
+      {
+        "threshold": 0.9960382580757141,
+        "alert_rate_%": 0.0201,
+        "alerts": 194,
+        "laundering_caught": 159,
+        "precision_%": 81.96,
+        "recall_%": 15.35
+      },
+      {
+        "threshold": 0.9893903136253357,
+        "alert_rate_%": 0.05,
+        "alerts": 483,
+        "laundering_caught": 299,
+        "precision_%": 61.9,
+        "recall_%": 28.86
+      },
+      {
+        "threshold": 0.9826626777648926,
+        "alert_rate_%": 0.1,
+        "alerts": 966,
+        "laundering_caught": 387,
+        "precision_%": 40.06,
+        "recall_%": 37.36
+      },
+      {
+        "threshold": 0.9705257415771484,
+        "alert_rate_%": 0.2001,
+        "alerts": 1932,
+        "laundering_caught": 483,
+        "precision_%": 25.0,
+        "recall_%": 46.62
+      },
+      {
+        "threshold": 0.9283344149589539,
+        "alert_rate_%": 0.5,
+        "alerts": 4828,
+        "laundering_caught": 642,
+        "precision_%": 13.3,
+        "recall_%": 61.97
+      },
+      {
+        "threshold": 0.8019137382507324,
+        "alert_rate_%": 1.0001,
+        "alerts": 9656,
+        "laundering_caught": 767,
+        "precision_%": 7.94,
+        "recall_%": 74.03
+      },
+      {
+        "threshold": 0.4901840090751648,
+        "alert_rate_%": 2.0001,
+        "alerts": 19311,
+        "laundering_caught": 844,
+        "precision_%": 4.37,
+        "recall_%": 81.47
+      }
+    ]
+  },
+  "test": {
+    "rows": 862792,
+    "laundering": 956,
+    "pr_auc": 0.2541,
+    "roc_auc": 0.9738,
+    "base_rate_%": 0.1108,
+    "pause_band": {
+      "threshold": 0.9283344149589539,
+      "alert_rate_%": 0.6958,
+      "alerts": 6003,
+      "laundering_caught": 496,
+      "precision_%": 8.26,
+      "recall_%": 51.88
+    },
+    "hold_band": {
+      "threshold": 0.9893903136253357,
+      "alert_rate_%": 0.0487,
+      "alerts": 420,
+      "laundering_caught": 219,
+      "precision_%": 52.14,
+      "recall_%": 22.91
+    },
+    "by_alert_rate": [
+      {
+        "threshold": 0.9960382580757141,
+        "alert_rate_%": 0.0152,
+        "alerts": 131,
+        "laundering_caught": 95,
+        "precision_%": 72.52,
+        "recall_%": 9.94
+      },
+      {
+        "threshold": 0.9893903136253357,
+        "alert_rate_%": 0.0487,
+        "alerts": 420,
+        "laundering_caught": 219,
+        "precision_%": 52.14,
+        "recall_%": 22.91
+      },
+      {
+        "threshold": 0.9826626777648926,
+        "alert_rate_%": 0.1008,
+        "alerts": 870,
+        "laundering_caught": 281,
+        "precision_%": 32.3,
+        "recall_%": 29.39
+      },
+      {
+        "threshold": 0.9705257415771484,
+        "alert_rate_%": 0.2258,
+        "alerts": 1948,
+        "laundering_caught": 370,
+        "precision_%": 18.99,
+        "recall_%": 38.7
+      },
+      {
+        "threshold": 0.9283344149589539,
+        "alert_rate_%": 0.6958,
+        "alerts": 6003,
+        "laundering_caught": 496,
+        "precision_%": 8.26,
+        "recall_%": 51.88
+      },
+      {
+        "threshold": 0.8019137382507324,
+        "alert_rate_%": 1.8423,
+        "alerts": 15895,
+        "laundering_caught": 641,
+        "precision_%": 4.03,
+        "recall_%": 67.05
+      },
+      {
+        "threshold": 0.4901840090751648,
+        "alert_rate_%": 3.6535,
+        "alerts": 31522,
+        "laundering_caught": 762,
+        "precision_%": 2.42,
+        "recall_%": 79.71
+      }
+    ]
+  }
+}
