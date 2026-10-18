@@ -4,12 +4,17 @@ Live features must match training exactly, so the scorer first replays all
 history before the test period into AccountState, using the same code and
 label cutoff as `python -m src.features`.
 
-Verify (and build the warm-state cache the API reuses):
+Verify:
 
     python -m src.scorer --verify 2000
+
+Saving the warmed state (--cache / TRUSTPAUSE_STATE_CACHE=1) makes API restarts
+fast but needs several GB of extra memory while saving, so it is off by default.
 """
 
 import argparse
+import gc
+import os
 import pickle
 import threading
 import time
@@ -25,37 +30,47 @@ from .reasons import top_reasons
 
 ROOT = Path(__file__).resolve().parent.parent
 CACHE = ROOT / "data" / "state_warm.pkl"
+USE_CACHE = os.environ.get("TRUSTPAUSE_STATE_CACHE") == "1"
 
 
 def load_history(data_path=DEFAULT_PATH):
     """Return (history before test, test rows, train_end), split exactly as in training."""
-    df = load_transactions(data_path)
-    dense = drop_sparse_days(df)
-    train, val, test = time_split(df)
+    dense = drop_sparse_days(load_transactions(data_path))
+    train, val, test = time_split(dense)  # same split as training (sparse days already gone)
     train_end = train["ts"].max()
     test_start = test["ts"].min()
-    del df, train, val
+    del train, val
     history = dense[dense["ts"] < test_start]
+    del dense
+    gc.collect()
     return history, test, train_end
 
 
-def warmed_state(history, train_end, cache=CACHE, use_cache=True):
-    """AccountState after all history, from cache when it matches this history."""
-    key = (len(history), str(history["ts"].iloc[-1]), str(train_end))
+def cache_key(history, train_end):
+    return (len(history), str(history["ts"].iloc[-1]), str(train_end))
+
+
+def warmed_state(history, train_end, cache=CACHE, use_cache=USE_CACHE):
+    """AccountState after all history (from the cache only when enabled and matching)."""
     if use_cache and Path(cache).exists():
         with open(cache, "rb") as f:
             saved_key, state = pickle.load(f)
-        if saved_key == key:
+        if saved_key == cache_key(history, train_end):
             print(f"Loaded warm state from {cache}", flush=True)
             return state
     print(f"Warming up account state from {len(history):,} historical transactions...", flush=True)
     start = time.time()
     state = warm_state(history, label_cutoff=train_end)
     print(f"Warm-up done in {time.time() - start:.0f}s", flush=True)
-    if use_cache:
-        with open(cache, "wb") as f:
-            pickle.dump((key, state), f, protocol=pickle.HIGHEST_PROTOCOL)
     return state
+
+
+def save_state(state, key, cache=CACHE):
+    """Optional: save the warmed state. Call after freeing the history DataFrame."""
+    gc.collect()
+    with open(cache, "wb") as f:
+        pickle.dump((key, state), f, protocol=pickle.HIGHEST_PROTOCOL)
+    print(f"Saved warm state to {cache}", flush=True)
 
 
 class Scorer:
@@ -121,12 +136,18 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="Check live scores match training scores")
     parser.add_argument("--verify", type=int, default=2000, help="number of test transactions to compare")
     parser.add_argument("--data", default=DEFAULT_PATH)
-    parser.add_argument("--no-cache", action="store_true")
+    parser.add_argument("--cache", action="store_true",
+                        help="load/save data/state_warm.pkl (needs several GB of free memory to save)")
     args = parser.parse_args(argv)
+    use_cache = args.cache or USE_CACHE
 
     history, test, train_end = load_history(args.data)
-    state = warmed_state(history, train_end, use_cache=not args.no_cache)
+    key = cache_key(history, train_end)
+    state = warmed_state(history, train_end, use_cache=use_cache)
     del history
+    gc.collect()
+    if use_cache and not Path(CACHE).exists():
+        save_state(state, key)  # before scoring: the cache must hold history only
     scorer = Scorer(state)
     rows = test_rows(test).iloc[: args.verify]
 

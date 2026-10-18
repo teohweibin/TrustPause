@@ -21,7 +21,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel, Field
 
 from .db import Store
-from .scorer import ROOT, Scorer, load_history, test_rows, warmed_state
+from .scorer import ROOT, USE_CACHE, CACHE, Scorer, cache_key, load_history, save_state, test_rows, warmed_state
 from .stream import Replayer
 from .templates import template_texts
 
@@ -105,8 +105,11 @@ def load():
         app_state["stage"] = "loading data"
         history, test, train_end = load_history()
         app_state["stage"] = f"warming up account state ({len(history):,} transactions)"
+        key = cache_key(history, train_end)
         state = warmed_state(history, train_end)
         del history
+        if USE_CACHE and not CACHE.exists():
+            save_state(state, key)
         app_state["stage"] = "loading models"
         scorer = Scorer(state)
         rows = test_rows(test)
