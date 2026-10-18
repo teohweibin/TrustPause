@@ -7,7 +7,7 @@
 - Theme: Theme 1, Real-Time AI for Critical Decisions
 - Build shape: Full-stack AI prototype on IBM LinuxONE (FastAPI + XGBoost + PyTorch/NNPA + Granite + 2 HTML views, Docker)
 - Current stage: Building
-- Current work card: `work-cards/06-scorer-replay-api.md` next for the main path (03 done); in parallel 04 NNPA probe, 05, 06 stub, 07 mock, 09; finish open items in `work-cards/00-setup-gate.md` alongside
+- Current work card: `work-cards/06-scorer-replay-api.md` (code written; verify on LinuxONE), then 07 views on the real API; in parallel 04 NNPA probe, 05, 06 stub, 07 mock, 09; finish open items in `work-cards/00-setup-gate.md` alongside
 
 ## Completed work cards
 
@@ -25,6 +25,7 @@
 ## In progress
 
 - 00 Setup gate: remaining items (Discord lab confirmation, `.pem` sharing, roles)
+- 06 Scorer + API: `src/scorer.py`, `src/api.py`, `src/db.py`, `src/stream.py`, `src/templates.py` written; tested on synthetic data (live scores match training exactly); run on LinuxONE pending
 
 ## Blockers
 
@@ -40,7 +41,9 @@
 - Explanations: XGBoost `pred_contribs` (no `shap` package) → `src/reasons.py` reason codes
 - Decision bands: alert budget on validation (default pause top 0.5%, hold top 0.05%), stored in `models/thresholds.json`
 - LLM: Granite on LinuxONE only; no external AI APIs; no IDs in prompts
-- Storage: SQLite
+- Storage: SQLite (`data/trustpause.db`, reset on API start, WAL, no fsync: demo data)
+- Live scoring: API warms `AccountState` with all history before the test period (same code and label cutoff as training), so live scores equal training scores; cached in `data/state_warm.pkl`
+- Granite jobs: sender first, replayed holds only when queue < 5, replayed pauses never; templates shown instantly
 - Frontend: sender view + analyst view, served by FastAPI
 - Access: SSH tunnels (Jupyter 38888, app 8000); no public ports
 - Deployment: Docker on LinuxONE; judges see it in the video

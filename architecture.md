@@ -92,16 +92,24 @@ Change with `python -m src.train_xgb --pause-rate ... --hold-rate ...` after rea
 
 | Method | Path | Purpose |
 |---|---|---|
-| `POST` | `/api/transfer` | Sender view submits `{src, dst, amount}` → returns decision, score, warning |
-| `POST` | `/api/replay/start` | Start replay `{speed}` |
+Implemented in `src/api.py` (card 06). Full request/response schemas at `/docs`.
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/status` | `{stage, error, granite}`; every other endpoint returns 503 until `stage == "ready"` (warm-up) |
+| `GET` | `/api/demo-accounts` | `[{id, label}]`: 3 receivers the model rates risky, 3 it rates safe (labels don't reveal which) |
+| `POST` | `/api/transfer` | Sender view: `{dst, amount}` → `{txn_id, case_id, decision, score, score_xgb, score_seq, latency_ms, sender_reasons, warning_en, warning_bm}`. Sender is the fixed `DEMO_SENDER`; time is the replay clock |
+| `POST` | `/api/transfer/{case_id}/choice` | Sender's answer to a pause: `{choice: "cancel" or "continue"}` |
+| `POST` | `/api/replay/start` | Start replay `{speed}` (transactions per second, 1–5000) |
 | `POST` | `/api/replay/stop` | Stop replay |
-| `GET` | `/api/feed?since=<id>` | Latest scored transactions (analyst view polls every 1 s) |
-| `GET` | `/api/queue` | Paused / held cases |
-| `GET` | `/api/case/{id}` | Case detail incl. reasons and Granite note |
-| `POST` | `/api/case/{id}/decision` | Analyst `{decision: 'approve' or 'reject'}` |
-| `GET` | `/api/metrics` | Counts per decision, txn/sec, latency p50/p95, NNPA on/off |
-| `GET` | `/api/demo-accounts` | Sample recipients for the sender view (some normal, some mule-like) |
-| `GET` | `/` , `/sender`, `/analyst` | Static pages |
+| `GET` | `/api/feed?since=<id>&limit=50` | Latest scored transactions, newest first (no account IDs); analyst view polls every 1 s |
+| `GET` | `/api/queue` | Held cases waiting for review: `{case_id, status, text_source, ts, amount, currency, score, first_reason}` |
+| `GET` | `/api/case/{id}` | Case detail: transaction, scores, `reasons` (analyst), `sender_reasons`, `warning_en/bm`, `analyst_note`, `text_source` (`template` or `granite`) |
+| `POST` | `/api/case/{id}/decision` | Analyst `{decision: "approve" or "reject"}`; 409 if not held |
+| `GET` | `/api/metrics` | Decision counts, laundering seen/flagged in replay, latency p50/p95, txn/sec, replay position, clock, thresholds, `sequence_model`, `granite`, `granite_queue` |
+| `GET` | `/`, `/sender`, `/analyst`, `/web/<file>` | Pages from `web/` (card 07) |
+
+**Granite contract (card 05):** `src/explain.py` must define `explain(payload) -> {"warning_en", "warning_bm", "analyst_note"}`. `payload = {decision, score, amount, currency, reasons, sender_reasons}` where reasons are the `src/reasons.py` dicts (no account IDs). The API shows template text from `src/templates.py` immediately and swaps in Granite text when `explain` returns. Jobs are prioritised: sender transfers first, replayed holds only while the queue is short, replayed pauses never.
 
 ## User Flow
 

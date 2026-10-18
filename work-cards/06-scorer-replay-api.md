@@ -55,4 +55,4 @@ If threading causes problems, run replay as a separate process writing to SQLite
 
 ## Status
 
-Not started
+In progress: code written and tested end to end on synthetic data; run on LinuxONE pending

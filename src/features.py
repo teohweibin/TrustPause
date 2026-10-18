@@ -228,15 +228,11 @@ def to_seconds(ts):
     return int((pd.Timestamp(ts) - epoch) // pd.Timedelta(seconds=1))
 
 
-def build_feature_table(df, label_cutoff=None, progress_every=500_000):
-    """Run AccountState over `df` in time order. Returns (features DataFrame with `label`, state)."""
+def _columns(df):
+    """The update_and_features arguments for every row of df, as parallel arrays."""
     if not df["ts"].is_monotonic_increasing:
         raise ValueError("df must be sorted by ts")
-
-    state = AccountState(label_cutoff=None if label_cutoff is None else to_seconds(label_cutoff))
-    out = np.empty((len(df), len(FEATURE_NAMES)), dtype=np.float32)
-
-    columns = (
+    return (
         to_seconds(df["ts"]),
         df["src"].to_numpy(dtype=object),
         df["dst"].to_numpy(dtype=object),
@@ -248,16 +244,38 @@ def build_feature_table(df, label_cutoff=None, progress_every=500_000):
         df["label"].to_numpy(),
     )
 
+
+def _progress(i, start, every):
+    if every and (i + 1) % every == 0:
+        elapsed = time.time() - start
+        print(f"{i + 1:,} rows  {elapsed:.0f}s  ({1e6 * elapsed / (i + 1):.1f} µs/row)", flush=True)
+
+
+def build_feature_table(df, label_cutoff=None, progress_every=500_000):
+    """Run AccountState over `df` in time order. Returns (features DataFrame with `label`, state)."""
+    columns = _columns(df)
+    state = AccountState(label_cutoff=None if label_cutoff is None else to_seconds(label_cutoff))
+    out = np.empty((len(df), len(FEATURE_NAMES)), dtype=np.float32)
+
     start = time.time()
     for i, row in enumerate(zip(*columns)):
         out[i] = state.update_and_features(*row)
-        if progress_every and (i + 1) % progress_every == 0:
-            elapsed = time.time() - start
-            print(f"{i + 1:,} rows  {elapsed:.0f}s  ({1e6 * elapsed / (i + 1):.1f} µs/row)", flush=True)
+        _progress(i, start, progress_every)
 
     features = pd.DataFrame(out, columns=FEATURE_NAMES, index=df.index)
     features["label"] = df["label"].to_numpy()
     return features, state
+
+
+def warm_state(df, label_cutoff=None, progress_every=500_000):
+    """Replay history into a fresh AccountState without keeping the features (for live scoring)."""
+    columns = _columns(df)
+    state = AccountState(label_cutoff=None if label_cutoff is None else to_seconds(label_cutoff))
+    start = time.time()
+    for i, row in enumerate(zip(*columns)):
+        state.update_and_features(*row)
+        _progress(i, start, progress_every)
+    return state
 
 
 def main(argv=None):

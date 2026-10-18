@@ -20,12 +20,14 @@ D (Granite)
 ## Instructions for the coding agent
 
 1. Load Granite with `llama_cpp_python` once at startup; model path from env var `GRANITE_MODEL_PATH`.
-2. Input: `{decision, score, reasons: [{code, sentence}], amount_band}`, **no account IDs or names**.
+2. Interface (already wired into the API, card 06): `src/explain.py` defines `explain(payload) -> {"warning_en": str, "warning_bm": str, "analyst_note": str}`.
+   `payload = {decision: "pause" | "hold", score, amount, currency, reasons, sender_reasons}`; each reason is `{code, feature, about, value, sentence, contribution}` from `src/reasons.py`. **No account IDs or names.** Use `sender_reasons` for the warnings and `reasons` for the analyst note.
+   Raise an exception on failure: the API keeps the template text from `src/templates.py`. Look at those templates for tone.
 3. Three short outputs (max ~60 words each, low temperature):
    - `warning_en`: calm, non-blaming, tells the sender what to check and that they can cancel
    - `warning_bm`: same in Bahasa Malaysia
    - `analyst_note`: 3 bullet points: pattern, evidence, suggested action
-4. Template fallback for each output if Granite is slow (> configurable timeout) or fails.
+4. Fallback is handled by the API (templates shown first, Granite text swapped in). Keep each call short: set `max_tokens` and a timeout.
 5. Measure generation time per output; record in `build-status.md`.
 6. Log one full prompt and confirm it has no IDs (screenshot for the privacy claim).
 
