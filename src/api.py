@@ -1,6 +1,6 @@
 """TrustPause API. Run on the LinuxONE server from the repo root:
 
-    nohup uvicorn src.api:app --host 127.0.0.1 --port 8000 > data/api.log 2>&1 &
+    GRANITE_MODEL_PATH=/path/to/granite.gguf nohup uvicorn src.api:app --host 127.0.0.1 --port 8000 > data/api.log 2>&1 &
 
 Open through the SSH tunnel (-L 8000:localhost:8000): http://localhost:8000/docs
 Startup warms up account state (about 2 minutes, or seconds with data/state_warm.pkl
@@ -25,7 +25,7 @@ from .scorer import ROOT, USE_CACHE, CACHE, Scorer, cache_key, load_history, sav
 from .stream import Replayer
 from .templates import template_texts
 
-try:  # card 05: explain(payload) -> {"warning_en", "warning_bm", "analyst_note"}
+try:  # card 05: explain(payload) -> {"warning_en", "warning_bm", "analyst_note", "used_granite", ...}
     from .explain import explain as granite_explain
 except ImportError:
     granite_explain = None
@@ -35,7 +35,7 @@ DEMO_SENDER = "DEMO_SENDER"
 HIGH_LABELS = ["Recipient A — Online seller", "Recipient C — Investment agent", "Recipient E — Job agency"]
 LOW_LABELS = ["Recipient B — Utility company", "Recipient D — Grocery store", "Recipient F — Family member"]
 
-app_state = {"stage": "starting", "error": None}
+app_state = {"stage": "starting", "error": None, "granite_last": None}
 # Granite is slow (seconds per case): sender transfers go first; replayed holds only
 # when the queue is short; replayed pauses never (no sender is watching them).
 granite_jobs = queue.PriorityQueue()
@@ -99,6 +99,10 @@ def pick_demo_accounts(rows, scorer, clock):
     return sorted(accounts, key=lambda a: a["label"])
 
 
+def amount_band(amount):
+    return "small" if amount < 1_000 else "medium" if amount < 10_000 else "large"
+
+
 def process(txn, source):
     """Score one transaction, store it, open a case if needed, queue Granite text."""
     scorer, store = app_state["scorer"], app_state["store"]
@@ -112,10 +116,12 @@ def process(txn, source):
     wanted = source == "sender" or (result["decision"] == "hold" and granite_jobs.qsize() < GRANITE_REPLAY_BACKLOG)
     if case_id and granite_explain and wanted:
         priority = 0 if source == "sender" else 1
+        # explain.py builds every text from `reasons`, and the warnings go to the
+        # sender, so it gets the sender-safe list; the analyst list rides along.
         granite_jobs.put((priority, next(_job_order), case_id, {
-            "decision": result["decision"], "score": result["score"], "amount": txn["amount"],
-            "currency": txn["receiving_currency"], "reasons": result["reasons"],
-            "sender_reasons": result["sender_reasons"],
+            "decision": result["decision"], "score": result["score"],
+            "amount_band": amount_band(txn["amount"]), "currency": txn["receiving_currency"],
+            "reasons": result["sender_reasons"], "analyst_reasons": result["reasons"],
         }))
     return result
 
@@ -125,8 +131,16 @@ def granite_worker():
         _, _, case_id, payload = granite_jobs.get()
         try:
             texts = granite_explain(payload)
-            app_state["store"].update_texts(case_id, texts, "granite")
+            used = texts.get("used_granite", True)
+            app_state["granite_last"] = {"case_id": case_id, "used_granite": used,
+                                         "seconds": texts.get("generation_seconds")}
+            if used:  # otherwise explain() returned its own generic fallback: keep our template
+                app_state["store"].update_texts(case_id, texts, "granite")
+            else:
+                print(f"Granite not used for case {case_id} (model not loaded or timed out); "
+                      "keeping template text", flush=True)
         except Exception as exc:  # keep the template text
+            app_state["granite_last"] = {"case_id": case_id, "used_granite": False, "error": repr(exc)}
             print(f"Granite failed for case {case_id}: {exc}", flush=True)
 
 
@@ -193,7 +207,8 @@ class DecisionIn(BaseModel):
 
 @app.get("/api/status")
 def status():
-    return {"stage": app_state["stage"], "error": app_state["error"], "granite": granite_explain is not None}
+    return {"stage": app_state["stage"], "error": app_state["error"], "granite": granite_explain is not None,
+            "granite_last": app_state["granite_last"]}
 
 
 @app.get("/api/demo-accounts")
@@ -297,6 +312,7 @@ def metrics():
         "sequence_model": scorer.seq_scorer is not None,
         "granite": granite_explain is not None,
         "granite_queue": granite_jobs.qsize(),
+        "granite_last": app_state["granite_last"],
     }
 
 

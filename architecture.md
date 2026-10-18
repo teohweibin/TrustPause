@@ -109,7 +109,7 @@ Implemented in `src/api.py` (card 06). Full request/response schemas at `/docs`.
 | `GET` | `/api/metrics` | Decision counts, laundering seen/flagged in replay, latency p50/p95, txn/sec, replay position, clock, thresholds, `sequence_model`, `granite`, `granite_queue` |
 | `GET` | `/`, `/sender`, `/analyst`, `/web/<file>` | Pages from `web/` (card 07) |
 
-**Granite contract (card 05):** `src/explain.py` must define `explain(payload) -> {"warning_en", "warning_bm", "analyst_note"}`. `payload = {decision, score, amount, currency, reasons, sender_reasons}` where reasons are the `src/reasons.py` dicts (no account IDs). The API shows template text from `src/templates.py` immediately and swaps in Granite text when `explain` returns. Jobs are prioritised: sender transfers first, replayed holds only while the queue is short, replayed pauses never.
+**Granite contract (card 05):** `src/explain.py` must define `explain(payload) -> {"warning_en", "warning_bm", "analyst_note"}`. `payload = {decision, score, amount_band (small/medium/large), currency, reasons, analyst_reasons}`. `reasons` is the **sender-safe** list (explain.py builds all three texts from it, and the warnings go to the sender); `analyst_reasons` is the full list. All are `src/reasons.py` dicts with no account IDs. The API shows template text from `src/templates.py` immediately and swaps in Granite text only when `explain` returns `used_granite: True`. Start the API with `GRANITE_MODEL_PATH` set, or every call falls back. `/api/status` → `granite_last` shows the latest result. Jobs are prioritised: sender transfers first, replayed holds only while the queue is short, replayed pauses never.
 
 ## User Flow
 
