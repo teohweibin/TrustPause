@@ -124,7 +124,7 @@
     <span class="avatar" aria-hidden="true">HR</span>
     <span style="flex:1">
       <span class="meta"><strong style="color:var(--text)">HR Recruiter</strong><span>now</span></span>
-      <span class="text" style="display:block">Congratulations, you got the job! 🎉 Please pay the <strong>$500 registration fee</strong> today to secure your offer. Offer expires in 1 hour.</span>
+      <span class="text" style="display:block">Congratulations, you got the job! 🎉 Please pay the <strong><span id="story-amount">$500</span> registration fee</strong> today to secure your offer. Offer expires in 1 hour.</span>
     </span>
   </button>
 
@@ -242,6 +242,7 @@ let current = null;
 let lang = "en";
 let ready = false;
 let lastFocus = null;
+let story = { recipient: null, amount: 500 };  // set from the API: a recipient + amount that reliably warn
 
 const activity = [
   { name: "Salary", sub: "Received · 9:02", amt: 3200, kind: "in" },
@@ -458,9 +459,8 @@ $("continue-transfer").addEventListener("click", () => choose("continue"));
 $("notif").addEventListener("click", () => {
   $("notif").classList.remove("show");
   setTimeout(() => { $("notif").hidden = true; }, 450);
-  const job = accounts.find((a) => /job agency/i.test(a.label)) || accounts[0];
-  if (!job || !ready) return;
-  draft = { recipient: job, amount: "500", purpose: "Job deposit" };
+  if (!story.recipient || !ready) return;
+  draft = { recipient: story.recipient, amount: String(story.amount), purpose: "Job deposit" };
   openAmount();
 });
 
@@ -503,6 +503,9 @@ renderHome();
   }
   try {
     accounts = await api("/api/demo-accounts");
+    story.recipient = accounts.find((a) => a.story_amount) || accounts.find((a) => /job agency/i.test(a.label)) || accounts[0];
+    story.amount = story.recipient.story_amount || 500;
+    $("story-amount").textContent = money(story.amount).replace(".00", "");
     renderRecipients();
     ready = true;
     $("status").hidden = true;

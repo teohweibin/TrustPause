@@ -62,7 +62,11 @@ GRANITE_REPLAY_BACKLOG = 5
 _job_order = itertools.count()
 
 
-DEMO_AMOUNTS = (100, 200, 500, 1000, 2000, 5000, 10000)  # 500 = the story amount
+DEMO_AMOUNTS = (100, 200, 500, 1000, 2000, 5000, 10000)  # safe recipients must be allowed at all of these
+# Amounts a scam might ask for. The model's score depends on the amount (a quirk of the
+# synthetic data), so each risky recipient keeps the amounts that warn, and the sender
+# page's story uses Job agency's first one.
+STORY_AMOUNTS = (500, 750, 1000, 1500, 2000, 2500, 3000, 4000, 5000)
 DEMO_CURRENCY = "US Dollar"
 
 
@@ -87,11 +91,11 @@ def pick_demo_accounts(rows, scorer, clock):
                 "payment_format": incoming["payment_format"].mode().iloc[0],
                 "currency": incoming["receiving_currency"].mode().iloc[0]}
 
-    def preview_scores(account):
+    def preview_scores(account, amounts):
         return [scorer.preview({
             "ts": clock, "src": DEMO_SENDER, "dst": account["id"], "amount": a, "amount_paid": a,
             "payment_format": account["payment_format"], "receiving_currency": account["currency"],
-            "payment_currency": account["currency"]}) for a in DEMO_AMOUNTS]
+            "payment_currency": account["currency"]}) for a in amounts]
 
     risky = t[t["label"] == 1].sort_values("score_xgb", ascending=False)
     risky = risky.assign(flagged=risky["dst"].isin(scorer.state.flagged)).sort_values(
@@ -105,13 +109,14 @@ def pick_demo_accounts(rows, scorer, clock):
     safe = list(clean[clean["top"] < pause].sort_values("n", ascending=False).index[:200])
     safe += list(clean[clean["top"] >= pause].sort_values("top").index[:50])
 
-    def choose(candidates, passes, rank):
+    def choose(candidates, amounts, passes, rank):
         """Best 3 passing candidates (by rank); if fewer pass, fill with the closest of the rest."""
         chosen, rest = [], []
         for dst in candidates:
             account = profile(dst)
-            previews = preview_scores(account)
-            account.update(passed=passes(previews), min_score=round(min(previews), 4), max_score=round(max(previews), 4))
+            previews = preview_scores(account, amounts)
+            account.update(passed=passes(previews), min_score=round(min(previews), 4), max_score=round(max(previews), 4),
+                           warn_amounts=[a for a, p in zip(amounts, previews) if p >= pause])
             (chosen if account["passed"] else rest).append((rank(previews), account))
             if len(chosen) == 6:  # a few spare, then keep the strongest
                 break
@@ -121,15 +126,20 @@ def pick_demo_accounts(rows, scorer, clock):
             chosen += sorted(rest, key=lambda r: r[0])[: 3 - len(chosen)]
         return [account for _, account in chosen]
 
-    high = choose(risky_candidates, lambda p: min(p) >= pause, lambda p: -min(p))
-    low = choose(safe, lambda p: max(p) < pause, lambda p: max(p))
+    # Risky: warns at 2+ scam-like amounts; rank by how many amounts warn, then by peak score.
+    high = choose(risky_candidates, STORY_AMOUNTS,
+                  lambda p: sum(x >= pause for x in p) >= 2, lambda p: (-sum(x >= pause for x in p), -max(p)))
+    low = choose(safe, DEMO_AMOUNTS, lambda p: max(p) < pause, lambda p: max(p))
+    if high and high[0]["warn_amounts"]:
+        high[0]["story_amount"] = high[0]["warn_amounts"][0]  # Job agency (strongest) drives the story
 
     accounts = [{**a, "label": label, "expected": "warn"} for label, a in zip(HIGH_LABELS, high)]
     accounts += [{**a, "label": label, "expected": "allow"} for label, a in zip(LOW_LABELS, low)]
     print(f"Demo recipients (pause threshold {pause:.4f}, amounts {DEMO_AMOUNTS}):", flush=True)
     for a in sorted(accounts, key=lambda a: a["label"]):
         print(f"  {a['label']}: expected {a['expected']}, passed {a['passed']}, "
-              f"scores {a['min_score']}–{a['max_score']}", flush=True)
+              f"scores {a['min_score']}–{a['max_score']}"
+              + (f", warns at {a['warn_amounts']}" if a["expected"] == "warn" else ""), flush=True)
     return sorted(accounts, key=lambda a: a["label"])
 
 
@@ -242,7 +252,7 @@ class DecisionIn(BaseModel):
 
 @app.get("/api/status")
 def status():
-    demo = [{k: a[k] for k in ("label", "expected", "passed", "min_score", "max_score")}
+    demo = [{k: a.get(k) for k in ("label", "expected", "passed", "min_score", "max_score", "warn_amounts", "story_amount")}
             for a in app_state.get("demo_accounts", [])]
     return {"stage": app_state["stage"], "error": app_state["error"], "granite": granite_explain is not None,
             "granite_last": app_state["granite_last"], "demo_check": demo}
@@ -250,7 +260,8 @@ def status():
 
 @app.get("/api/demo-accounts")
 def demo_accounts():
-    return [{"id": a["id"], "label": a["label"], "currency": a["currency"]} for a in ready()["demo_accounts"]]
+    return [{"id": a["id"], "label": a["label"], "currency": a["currency"], "story_amount": a.get("story_amount")}
+            for a in ready()["demo_accounts"]]
 
 
 @app.post("/api/transfer")
