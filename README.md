@@ -62,6 +62,12 @@ In plain words: on unseen days, TrustPause **holds about 1 in 2,000 transfers an
 | **Whole live pipeline** (features + model + reasons) | p50 **0.30 ms**, p95 **0.72 ms** |
 | Live scores vs training scores | **Identical** (`python -m src.scorer --verify 2000` → `MATCH`) |
 
+### Running on IBM LinuxONE
+
+The live server: `uname -m` → **s390x** (IBM Z architecture), `lscpu` lists **nnpa** (Telum on-chip AI accelerator), and `docker ps` shows the **trustpause** container up next to the L1CC Jupyter container.
+
+![s390x, NNPA and the TrustPause container on LinuxONE](screenshots/linuxone_s390x_nnpa_docker.png)
+
 ### Telum on-chip AI accelerator (NNPA)
 
 We ran a PyTorch GRU sequence model on the NNPA through `torch_nnpa` (`is_telum2_available()` → `True`; outputs match CPU within 0.00025):
