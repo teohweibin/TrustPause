@@ -57,4 +57,13 @@ If generation takes > 15 s, shorten outputs / reduce context, or generate only t
 
 ## Status
 
-Not started
+Complete — verified on IBM LinuxONE.
+
+Evidence:
+
+- `src/explain.py` uses local IBM Granite through `llama_cpp_python` and `GRANITE_MODEL_PATH`.
+- `notebooks/05_granite.ipynb` ran with 4 code cells, 0 unexecuted cells, and 0 error cells.
+- Five reason combinations produced English warnings, Bahasa Malaysia warnings, and analyst notes.
+- Bahasa Malaysia output was reviewed and approved by a Malay-speaking teammate.
+- The privacy audit confirmed that prompts contain no account IDs or personal identifiers.
+- Maximum observed generation time was 11.95 seconds; the 15-second stop condition was not triggered.

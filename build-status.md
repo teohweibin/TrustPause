@@ -120,7 +120,7 @@
 - Malay speaker review: Approved
 - Notebook: `notebooks/05_granite.ipynb`
 - Notebook audit: 4 code cells, 0 unexecuted cells, 0 error cells
-- Privacy screenshot: `screenshots/labs/granite_prompt_privacy.png`
+- Privacy screenshot: `screenshots/granite_prompt_privacy.png`
 - Maximum observed generation time: 11.95 seconds
 - Granite timeout stop condition: not triggered
 - Informational runtime message about V-cache padding was observed; no generation failure occurred.
@@ -136,7 +136,7 @@
 - XGBoost single prediction on LinuxONE: p50 0.10 ms, p95 0.30 ms (best iteration 283, trained in 74 s)
 - End-to-end scoring latency p50 / p95 (card 06):
 - GRU latency CPU vs NNPA (batch 1 / 64):
-- Granite time per output:
+- Granite time per output: English 3.77–4.24 s; Bahasa Malaysia 5.54–6.17 s; analyst note 7.88–11.95 s; maximum 11.95 s.
 
 ## Next instruction for AI
 
